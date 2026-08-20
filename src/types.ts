@@ -25,7 +25,6 @@ export interface Verse {
   teksLatin: string;
   teksIndonesia: string;
   audio: VerseAudio;
-  tafsir?: string;
 }
 
 export interface SurahDetail extends SurahSummary {
@@ -141,50 +140,6 @@ export interface AudioRecording {
   audioUrl: string;
   recordedAt: string;
   durationSeconds: number;
-}
-
-// Tafsir bil Ma'tsur Types
-export interface TafsirVerseItem {
-  ayat: number;
-  teks: string;
-}
-
-export interface TafsirSurahDetail {
-  nomor: number;
-  nama: string;
-  namaLatin: string;
-  jumlahAyat: number;
-  tempatTurun: string;
-  arti: string;
-  deskripsi: string;
-  audioFull?: Record<string, string>;
-  tafsir: TafsirVerseItem[];
-}
-
-export interface TafsirBilMatsurRiwayat {
-  surahNumber: number;
-  verseNumber: number;
-  quranBilQuran?: {
-    relatedVerses: string[]; // e.g. "QS. Al-Baqarah: 185", "QS. Al-Qadr: 1"
-    explanation: string;
-  };
-  haditsShahih: Array<{
-    perawi: string; // e.g. "HR. Bukhari no. 5027", "HR. Muslim no. 804"
-    matan: string; // Arabic or text
-    terjemah: string;
-    derajat: 'Shahih' | 'Hasan' | 'Muttafaq Alaih';
-    keterangan: string;
-  }>;
-  atsarSahabatTabiin: Array<{
-    tokoh: string; // e.g. "Abdullah bin Abbas radhiyallahu 'anhuma", "Mujahid bin Jabr", "Qatadah"
-    riwayat: string;
-  }>;
-  asbabunNuzul?: {
-    adaRiwayat: boolean;
-    ringkasan?: string;
-    sumber?: string; // e.g. "Asbabun Nuzul Al-Wahidi / Lubabun Nuqul As-Suyuthi"
-  };
-  faedahTadabbur: string[];
 }
 
 // Tahfidz Exam / Ikhtibar Types

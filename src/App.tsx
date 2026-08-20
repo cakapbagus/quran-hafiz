@@ -39,10 +39,8 @@ import { VerseList } from './components/VerseList';
 import { HafalanModeView } from './components/HafalanModeView';
 import { BookmarksView } from './components/BookmarksView';
 import { HafalanProgressView } from './components/HafalanProgressView';
-import { TafsirBilMatsurView } from './components/TafsirBilMatsurView';
 import { ModeUjianTahfidzView } from './components/ModeUjianTahfidzView';
 import { TajwidGuideView } from './components/TajwidGuideView';
-import { TafsirModal } from './components/TafsirModal';
 import { SettingsModal } from './components/SettingsModal';
 import { CloudSyncModal } from './components/CloudSyncModal';
 import { VoiceRecorderModal } from './components/VoiceRecorderModal';
@@ -68,7 +66,6 @@ export default function App() {
   // Modals & Popups
   const [isSettingsOpen, setIsSettingsOpen] = useState<boolean>(false);
   const [voiceRecorderVerse, setVoiceRecorderVerse] = useState<{ surahNumber: number; verseNumber: number } | null>(null);
-  const [tafsirModalVerse, setTafsirModalVerse] = useState<{ surahNumber: number; verseNumber: number } | null>(null);
   const [playbackState, setPlaybackState] = useState<AudioPlaybackState>({
     isPlaying: false,
     surahNumber: null,
@@ -535,9 +532,6 @@ export default function App() {
                   onOpenVoiceRecorder={(vNum) =>
                     setVoiceRecorderVerse({ surahNumber: currentSurahDetail.nomor, verseNumber: vNum })
                   }
-                  onOpenTafsirForVerse={(vNum) =>
-                    setTafsirModalVerse({ surahNumber: currentSurahDetail.nomor, verseNumber: vNum })
-                  }
                   onNavigateSurah={(sNum) => handleSelectSurah(sNum)}
                   activePlayingVerse={
                     playbackState.surahNumber === currentSurahDetail.nomor ? playbackState.verseNumber : null
@@ -577,21 +571,6 @@ export default function App() {
           />
         )}
 
-        {/* Tab 4: Tafsir Bil Ma'tsur View */}
-        {activeTab === 'tafsir' && (
-          <TafsirBilMatsurView
-            initialSurahNumber={currentSurahDetail?.nomor || 1}
-            customApiKey={settings.customApiKey}
-            onPlayVerseAudio={(sNum, vNum) => {
-              if (selectedSurahNumber !== sNum) {
-                setSelectedSurahNumber(sNum);
-              }
-              handlePlayVerse(vNum);
-            }}
-            onOpenHafalanForVerse={(sNum, vNum) => handleOpenHafalanForVerse(sNum, vNum)}
-          />
-        )}
-
         {/* Tab 5: Hukum Tajwid Lengkap */}
         {activeTab === 'tajwid' && (
           <TajwidGuideView />
@@ -604,9 +583,6 @@ export default function App() {
             onRemoveBookmark={handleRemoveBookmark}
             onJumpToVerse={handleJumpToBookmark}
             onOpenHafalanForVerse={handleOpenHafalanForVerse}
-            onOpenTafsirForVerse={(sNum, vNum) =>
-              setTafsirModalVerse({ surahNumber: sNum, verseNumber: vNum })
-            }
           />
         )}
 
@@ -635,28 +611,6 @@ export default function App() {
         onSeek={handleSeek}
         settings={settings}
       />
-
-      {/* Tafsir Bil Ma'tsur Modal */}
-      {tafsirModalVerse && currentSurahDetail && (
-        <TafsirModal
-          surahNumber={tafsirModalVerse.surahNumber}
-          surahName={currentSurahDetail.namaLatin}
-          verseNumber={tafsirModalVerse.verseNumber}
-          verseArab={
-            currentSurahDetail.ayat.find((v) => v.nomorAyat === tafsirModalVerse.verseNumber)?.teksArab || ''
-          }
-          verseTranslation={
-            currentSurahDetail.ayat.find((v) => v.nomorAyat === tafsirModalVerse.verseNumber)?.teksIndonesia || ''
-          }
-          totalVerses={currentSurahDetail.jumlahAyat}
-          onClose={() => setTafsirModalVerse(null)}
-          onNavigateVerse={(vNum) =>
-            setTafsirModalVerse({ surahNumber: currentSurahDetail.nomor, verseNumber: vNum })
-          }
-          onPlayAudio={() => handlePlayVerse(tafsirModalVerse.verseNumber)}
-          customApiKey={settings.customApiKey}
-        />
-      )}
 
       {/* Cloud Sync Modal */}
       <CloudSyncModal

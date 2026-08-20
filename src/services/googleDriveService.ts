@@ -198,7 +198,7 @@ export async function uploadCloudBackup(
   const metadata = {
     name: DRIVE_FILE_NAME,
     mimeType: 'application/json',
-    description: 'Quran Hifz Data Backup (Settings, Bookmarks, Hafalan Records)'
+    description: 'Quran Hafiz Data Backup (Settings, Bookmarks, Hafalan Records)'
   };
 
   const fileContent = JSON.stringify(payload, null, 2);
@@ -299,7 +299,7 @@ export function buildBackupPayload(
   };
 
   return {
-    app: 'Quran Hifz',
+    app: 'Quran Hafiz',
     version: '1.0.0',
     exportedAt: new Date().toISOString(),
     userEmail: userEmail || undefined,

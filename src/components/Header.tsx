@@ -9,14 +9,13 @@ import {
   Search,
   Settings,
   RotateCcw,
-  Scroll,
   GraduationCap,
   Sparkles,
   Cloud
 } from 'lucide-react';
 import { UserSettings, LastRead } from '../types';
 
-export type MainTabType = 'read' | 'hafalan' | 'ujian' | 'tafsir' | 'tajwid' | 'bookmark' | 'progress';
+export type MainTabType = 'read' | 'hafalan' | 'ujian' | 'tajwid' | 'bookmark' | 'progress';
 
 interface HeaderProps {
   activeTab: MainTabType;
@@ -64,7 +63,7 @@ export const Header: React.FC<HeaderProps> = ({
             </div>
             <div>
               <h1 className="text-lg sm:text-xl font-bold tracking-wide text-[#D4AF37] font-serif-title flex items-center gap-2">
-                Quran Hifz
+                Quran Hafiz
               </h1>
             </div>
           </div>
@@ -170,7 +169,7 @@ export const Header: React.FC<HeaderProps> = ({
             <span>Mode Hafalan</span>
             <span className={`px-1.5 py-0.2 text-[9px] rounded font-bold uppercase tracking-wider ${
               activeTab === 'hafalan' ? 'bg-[#0A0A0B] text-[#D4AF37]' : 'bg-[#1A1C23] text-[#D4AF37] border border-[#2A2D35]'
-            }`}>Hifz</span>
+            }`}>Hafiz</span>
           </button>
 
           <button
@@ -186,18 +185,6 @@ export const Header: React.FC<HeaderProps> = ({
             <span className={`px-1.5 py-0.2 text-[9px] rounded font-bold uppercase tracking-wider ${
               activeTab === 'ujian' ? 'bg-[#0A0A0B] text-[#D4AF37]' : 'bg-[#1A1C23] text-[#D4AF37] border border-[#2A2D35]'
             }`}>Ikhtibar</span>
-          </button>
-
-          <button
-            onClick={() => setActiveTab('tafsir')}
-            className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-semibold transition-all whitespace-nowrap cursor-pointer ${
-              activeTab === 'tafsir'
-                ? 'bg-[#D4AF37] text-[#0A0A0B] shadow-lg shadow-[#D4AF37]/20 font-bold'
-                : 'text-[#8A8D9A] hover:text-[#E2E2E2] hover:bg-[#15171E]'
-            }`}
-          >
-            <Scroll className="w-4 h-4" />
-            <span>Tafsir Bil Ma'tsur</span>
           </button>
 
           <button

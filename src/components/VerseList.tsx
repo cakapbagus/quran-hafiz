@@ -32,7 +32,6 @@ interface VerseListProps {
   onUpdateHafalanStatus: (verseNumber: number, status: HafalanVerseRecord['status']) => void;
   onOpenHafalanModeForVerse: (verseNumber: number) => void;
   onOpenVoiceRecorder: (verseNumber: number) => void;
-  onOpenTafsirForVerse?: (verseNumber: number) => void;
   onNavigateSurah: (surahNumber: number) => void;
   activePlayingVerse: number | null;
 }
@@ -49,7 +48,6 @@ export const VerseList: React.FC<VerseListProps> = ({
   onUpdateHafalanStatus,
   onOpenHafalanModeForVerse,
   onOpenVoiceRecorder,
-  onOpenTafsirForVerse,
   onNavigateSurah,
   activePlayingVerse
 }) => {
@@ -252,17 +250,6 @@ export const VerseList: React.FC<VerseListProps> = ({
                   >
                     <Mic className="w-4 h-4" />
                   </button>
-
-                  {/* Tafsir Bil Ma'tsur */}
-                  {onOpenTafsirForVerse && (
-                    <button
-                      onClick={() => onOpenTafsirForVerse(verse.nomorAyat)}
-                      className="p-2 rounded-xl bg-[#0F1115] text-[#D4AF37] border border-[#2A2D35] hover:bg-[#1A1C23] transition-all cursor-pointer"
-                      title="Kajian Tafsir Bil Ma'tsur & Asbabun Nuzul"
-                    >
-                      <Scroll className="w-4 h-4" />
-                    </button>
-                  )}
 
                   {/* Copy Verse */}
                   <button

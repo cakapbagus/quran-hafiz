@@ -7,15 +7,13 @@ interface BookmarksViewProps {
   onRemoveBookmark: (surahNumber: number, verseNumber: number) => void;
   onJumpToVerse: (surahNumber: number, verseNumber: number) => void;
   onOpenHafalanForVerse: (surahNumber: number, verseNumber: number) => void;
-  onOpenTafsirForVerse?: (surahNumber: number, verseNumber: number) => void;
 }
 
 export const BookmarksView: React.FC<BookmarksViewProps> = ({
   bookmarks,
   onRemoveBookmark,
   onJumpToVerse,
-  onOpenHafalanForVerse,
-  onOpenTafsirForVerse
+  onOpenHafalanForVerse
 }) => {
   const [filterTag, setFilterTag] = useState<string>('all');
 
@@ -87,16 +85,6 @@ export const BookmarksView: React.FC<BookmarksViewProps> = ({
                     <Brain className="w-3.5 h-3.5" />
                     <span>Latihan Hafalan</span>
                   </button>
-
-                  {onOpenTafsirForVerse && (
-                    <button
-                      onClick={() => onOpenTafsirForVerse(bm.surahNumber, bm.verseNumber)}
-                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#0F1115] text-[#D4AF37] border border-[#2A2D35] hover:bg-[#1A1C23] text-xs font-semibold transition cursor-pointer"
-                    >
-                      <Scroll className="w-3.5 h-3.5" />
-                      <span>Tafsir</span>
-                    </button>
-                  )}
 
                   <button
                     onClick={() => onRemoveBookmark(bm.surahNumber, bm.verseNumber)}

@@ -1,14 +1,13 @@
-# Quran Hifz
+# Quran Hafiz
 
 Aplikasi Al-Qur'an digital interaktif dengan audio murottal berbagai Qari, mode
 khusus hafalan (looping ayat, penutup teks/blur), perekam audio hafalan,
-tafsir bil ma'tsur riwayat shahih, mode ujian (ikhtibar) tahfidz, bookmark,
+mode ujian (ikhtibar) tahfidz, bookmark,
 dan cloud save Google Drive.
 
 ## Stack
 
 - React 19 + Vite 6 + Tailwind CSS 4
-- Vercel Serverless Functions (`/api`) untuk endpoint tafsir
 - Data ayat & audio dari [equran.id](https://equran.id) (dengan fallback ke
   [api.quran.com](https://api.quran.com) dan [everyayah.com](https://everyayah.com))
 - Semua state pengguna (settings, bookmark, progres hafalan) disimpan di
@@ -26,11 +25,6 @@ npm run dev
 ```
 
 Buka `http://localhost:5173`.
-
-Endpoint API (`/api/health`, `/api/ai/tafsir-ibnu-katsir`,
-`/api/ai/tafsir-bil-matsur`) hanya aktif saat dijalankan lewat `vercel dev`
-(lihat bagian Deploy). Untuk pengembangan UI sehari-hari, `npm run dev` sudah
-cukup.
 
 ## Deploy ke Vercel
 
@@ -66,17 +60,11 @@ domain produksi Anda. Untuk mengaktifkan fitur ini setelah deploy:
 3. Ganti nilai `DEFAULT_CLIENT_ID` di
    `src/services/googleDriveService.ts` dengan Client ID Anda.
 
-Fitur lain (murottal, hafalan, tafsir, ujian tahfidz, bookmark) berjalan
+Fitur lain (murottal, hafalan, ujian tahfidz, bookmark) berjalan
 penuh tanpa konfigurasi tambahan.
 
 ## Struktur proyek
 
 ```
-api/                  Vercel Serverless Functions
-  health.ts            GET  /api/health
-  ai/
-    tafsir-ibnu-katsir.ts   POST /api/ai/tafsir-ibnu-katsir
-    tafsir-bil-matsur.ts    POST /api/ai/tafsir-bil-matsur
-  _lib/tafsir-fallback.ts   Logika bersama kedua endpoint di atas
 src/                  Aplikasi React (Vite)
 ```

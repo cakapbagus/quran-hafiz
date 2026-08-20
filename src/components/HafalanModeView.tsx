@@ -76,7 +76,10 @@ export const HafalanModeView: React.FC<HafalanModeViewProps> = ({
   };
 
   const toggleVerseReveal = (verseNum: number) => {
-    setRevealedVerses((prev) => ({ ...prev, [verseNum]: !prev[verseNum] }));
+    setRevealedVerses((prev) => {
+      const current = prev[verseNum] ?? maskType === 'none';
+      return { ...prev, [verseNum]: !current };
+    });
   };
 
   // Helper to convert verse text to first letters for memory prompting
@@ -267,7 +270,7 @@ export const HafalanModeView: React.FC<HafalanModeViewProps> = ({
       <div className="space-y-4">
         {filteredVerses.map((verse) => {
           const isCurrentPlaying = activePlayingVerse === verse.nomorAyat && playbackState.isPlaying;
-          const isRevealed = revealedVerses[verse.nomorAyat] || false;
+          const isRevealed = revealedVerses[verse.nomorAyat] ?? maskType === 'none';
           const hafalanRecord = hafalanRecords[`${selectedSurahNumber}_${verse.nomorAyat}`];
 
           return (
@@ -323,7 +326,7 @@ export const HafalanModeView: React.FC<HafalanModeViewProps> = ({
                     className="p-2 rounded-xl bg-[#0F1115] text-[#8A8D9A] border border-[#2A2D35] hover:text-[#E2E2E2] hover:bg-[#1A1C23] transition cursor-pointer"
                     title="Tampilkan / Sembunyikan Teks"
                   >
-                    {isRevealed || maskType === 'none' ? (
+                    {isRevealed ? (
                       <Eye className="w-4 h-4 text-[#D4AF37]" />
                     ) : (
                       <EyeOff className="w-4 h-4 text-[#8A8D9A]" />
@@ -334,22 +337,24 @@ export const HafalanModeView: React.FC<HafalanModeViewProps> = ({
 
               {/* Text Render according to Masking Mode */}
               <div className="py-2 text-right">
-                {maskType === 'blur_all' && !isRevealed ? (
-                  <div
-                    onClick={() => toggleVerseReveal(verse.nomorAyat)}
-                    className="p-5 rounded-2xl bg-[#0F1115] border-2 border-dashed border-[#D4AF37]/50 text-center cursor-pointer hover:bg-[#1A1C23] transition"
-                  >
-                    <p className="text-xs font-bold text-[#D4AF37]">
-                      🙈 Teks Arab Tersembunyi (Klik untuk melihat)
+                {!isRevealed ? (
+                  maskType === 'first_letters' ? (
+                    <p
+                      className="font-arabic font-bold text-[#D4AF37] leading-loose tracking-widest text-2xl"
+                      dir="rtl"
+                    >
+                      {formatFirstLetters(verse.teksArab)}
                     </p>
-                  </div>
-                ) : maskType === 'first_letters' && !isRevealed ? (
-                  <p
-                    className="font-arabic font-bold text-[#D4AF37] leading-loose tracking-widest text-2xl"
-                    dir="rtl"
-                  >
-                    {formatFirstLetters(verse.teksArab)}
-                  </p>
+                  ) : (
+                    <div
+                      onClick={() => toggleVerseReveal(verse.nomorAyat)}
+                      className="p-5 rounded-2xl bg-[#0F1115] border-2 border-dashed border-[#D4AF37]/50 text-center cursor-pointer hover:bg-[#1A1C23] transition"
+                    >
+                      <p className="text-xs font-bold text-[#D4AF37]">
+                        🙈 Teks Arab Tersembunyi (Klik untuk melihat)
+                      </p>
+                    </div>
+                  )
                 ) : (
                   <ColoredArabicVerse
                     arabicText={verse.teksArab}
@@ -360,7 +365,7 @@ export const HafalanModeView: React.FC<HafalanModeViewProps> = ({
               </div>
 
               {/* Translation */}
-              {(isRevealed || maskType === 'none') && verse.teksIndonesia && (
+              {isRevealed && verse.teksIndonesia && (
                 <p className="text-xs text-[#8A8D9A] pt-2 border-t border-[#1F2128] mt-2">
                   {verse.teksIndonesia}
                 </p>
