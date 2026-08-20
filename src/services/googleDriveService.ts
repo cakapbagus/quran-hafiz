@@ -12,8 +12,10 @@ const TOKEN_STORAGE_KEY = 'murottal_gdrive_access_token_v1';
 const USER_PROFILE_KEY = 'murottal_gdrive_user_profile_v1';
 const LAST_SYNC_KEY = 'murottal_gdrive_last_sync_v1';
 
-// Default Client ID configured for this project
-const DEFAULT_CLIENT_ID = '457891225919-web-client.apps.googleusercontent.com';
+// Default Client ID configured for this project.
+// Set VITE_GOOGLE_CLIENT_ID in your environment (.env.local for dev, or the
+// Vercel Project Settings > Environment Variables for production/preview).
+const DEFAULT_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || '';
 
 export function getStoredAccessToken(): string | null {
   try {
