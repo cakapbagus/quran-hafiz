@@ -1,0 +1,214 @@
+import React from 'react';
+import { UserSettings } from '../types';
+import { QARIS } from '../data/qaris';
+import { X, Sliders, Type, Volume2, Moon, Sun, Trash2, Cloud, Sparkles } from 'lucide-react';
+
+interface SettingsModalProps {
+  settings: UserSettings;
+  onUpdateSettings: (newSettings: Partial<UserSettings>) => void;
+  onClose: () => void;
+  onClearCache: () => void;
+  onOpenCloudSync?: () => void;
+}
+
+export const SettingsModal: React.FC<SettingsModalProps> = ({
+  settings,
+  onUpdateSettings,
+  onClose,
+  onClearCache,
+  onOpenCloudSync
+}) => {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fade-in">
+      <div className="bg-[#15171E] rounded-3xl max-w-lg w-full p-6 space-y-6 shadow-2xl border border-[#1F2128] max-h-[90vh] overflow-y-auto">
+        <div className="flex items-center justify-between pb-3 border-b border-[#1F2128]">
+          <h2 className="text-lg font-bold text-[#E2E2E2] flex items-center gap-2 font-serif-title">
+            <Sliders className="w-5 h-5 text-[#D4AF37]" />
+            <span>Pengaturan Aplikasi</span>
+          </h2>
+          <button
+            onClick={onClose}
+            className="p-1 rounded-xl text-[#8A8D9A] hover:text-[#E2E2E2] cursor-pointer"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        {/* Cloud Sync Google Drive Banner */}
+        {onOpenCloudSync && (
+          <div className="p-4 rounded-2xl bg-gradient-to-r from-[#D4AF37]/15 to-[#D4AF37]/5 border border-[#D4AF37]/30 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-xl bg-[#D4AF37]/20 border border-[#D4AF37]/40 flex items-center justify-center text-[#D4AF37] shrink-0">
+                <Cloud className="w-5 h-5" />
+              </div>
+              <div>
+                <h4 className="text-xs font-bold text-[#E2E2E2] flex items-center gap-1.5">
+                  <span>Cloud Save Google Drive</span>
+                  <Sparkles className="w-3 h-3 text-[#D4AF37]" />
+                </h4>
+                <p className="text-[10px] text-[#8A8D9A]">
+                  Cadangkan bookmark, progres hafalan, dan kredensial API ke akun Google
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={() => {
+                onClose();
+                onOpenCloudSync();
+              }}
+              className="px-3.5 py-1.5 rounded-xl bg-[#D4AF37] hover:bg-[#E5C358] text-[#0A0A0B] text-xs font-bold transition cursor-pointer shrink-0 shadow"
+            >
+              Buka Cloud Sync
+            </button>
+          </div>
+        )}
+
+        {/* Theme Settings */}
+        <div className="space-y-3">
+          <h3 className="text-xs font-bold text-[#8A8D9A] uppercase tracking-wide flex items-center gap-2">
+            <Sun className="w-4 h-4 text-[#D4AF37]" />
+            <span>Tema Tampilan Aplikasi</span>
+          </h3>
+          <div className="grid grid-cols-2 gap-3">
+            <button
+              onClick={() => onUpdateSettings({ theme: 'dark' })}
+              className={`p-3 rounded-2xl border flex items-center justify-between text-xs font-bold transition cursor-pointer ${
+                settings.theme === 'dark'
+                  ? 'bg-[#1A1C23] border-[#D4AF37] text-[#D4AF37] ring-1 ring-[#D4AF37]/50'
+                  : 'bg-[#0F1115] border-[#2A2D35] text-[#8A8D9A] hover:text-[#E2E2E2]'
+              }`}
+            >
+              <span className="flex items-center gap-2">
+                <Moon className="w-4 h-4" />
+                <span>Mode Gelap (Dark)</span>
+              </span>
+              {settings.theme === 'dark' && <span className="w-2 h-2 rounded-full bg-[#D4AF37]" />}
+            </button>
+
+            <button
+              onClick={() => onUpdateSettings({ theme: 'light' })}
+              className={`p-3 rounded-2xl border flex items-center justify-between text-xs font-bold transition cursor-pointer ${
+                settings.theme === 'light'
+                  ? 'bg-[#1A1C23] border-[#D4AF37] text-[#D4AF37] ring-1 ring-[#D4AF37]/50'
+                  : 'bg-[#0F1115] border-[#2A2D35] text-[#8A8D9A] hover:text-[#E2E2E2]'
+              }`}
+            >
+              <span className="flex items-center gap-2">
+                <Sun className="w-4 h-4" />
+                <span>Mode Terang (Light)</span>
+              </span>
+              {settings.theme === 'light' && <span className="w-2 h-2 rounded-full bg-[#D4AF37]" />}
+            </button>
+          </div>
+        </div>
+
+        {/* Font Size Settings */}
+        <div className="space-y-3">
+          <h3 className="text-xs font-bold text-[#8A8D9A] uppercase tracking-wide flex items-center gap-2">
+            <Type className="w-4 h-4 text-[#D4AF37]" />
+            <span>Ukuran Tulisan Arab ({settings.arabicFontSize}px)</span>
+          </h3>
+          <input
+            type="range"
+            min={20}
+            max={48}
+            value={settings.arabicFontSize}
+            onChange={(e) => onUpdateSettings({ arabicFontSize: Number(e.target.value) })}
+            className="w-full accent-[#D4AF37] cursor-pointer"
+          />
+          <div className="p-3 bg-[#0F1115] border border-[#2A2D35] rounded-xl text-right font-arabic font-bold text-[#E2E2E2]" style={{ fontSize: `${settings.arabicFontSize}px` }}>
+            بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ
+          </div>
+        </div>
+
+        {/* Display Toggles */}
+        <div className="space-y-2 pt-2 border-t border-[#1F2128]">
+          <h3 className="text-xs font-bold text-[#8A8D9A] uppercase tracking-wide">
+            Tampilan, Terjemahan & Tajwid
+          </h3>
+
+          <label className="flex items-center justify-between p-3 rounded-2xl bg-[#0F1115] border border-[#2A2D35] cursor-pointer hover:border-[#D4AF37]/50 transition">
+            <div className="space-y-0.5">
+              <span className="text-xs font-semibold text-[#E2E2E2] block flex items-center gap-1.5">
+                <span>Tajwid Berwarna pada Teks Arab</span>
+                <span className="text-[10px] px-1.5 py-0.2 rounded bg-[#D4AF37]/20 text-[#D4AF37] font-bold">Rekomendasi</span>
+              </span>
+              <span className="text-[10px] text-[#8A8D9A] block">
+                Mewarnai hukum tajwid (ghunnah, ikhfa, idgham, mad, qalqalah, dll.)
+              </span>
+            </div>
+            <input
+              type="checkbox"
+              checked={settings.enableColoredTajwid ?? true}
+              onChange={(e) => onUpdateSettings({ enableColoredTajwid: e.target.checked })}
+              className="w-4 h-4 accent-[#D4AF37] rounded cursor-pointer"
+            />
+          </label>
+
+          <label className="flex items-center justify-between p-3 rounded-2xl bg-[#0F1115] border border-[#2A2D35] cursor-pointer">
+            <span className="text-xs font-semibold text-[#E2E2E2]">
+              Tampilkan Terjemahan Bahasa Indonesia
+            </span>
+            <input
+              type="checkbox"
+              checked={settings.showTranslation}
+              onChange={(e) => onUpdateSettings({ showTranslation: e.target.checked })}
+              className="w-4 h-4 accent-[#D4AF37] rounded cursor-pointer"
+            />
+          </label>
+
+          <label className="flex items-center justify-between p-3 rounded-2xl bg-[#0F1115] border border-[#2A2D35] cursor-pointer">
+            <span className="text-xs font-semibold text-[#E2E2E2]">
+              Tampilkan Transliterasi Latin
+            </span>
+            <input
+              type="checkbox"
+              checked={settings.showLatin}
+              onChange={(e) => onUpdateSettings({ showLatin: e.target.checked })}
+              className="w-4 h-4 accent-[#D4AF37] rounded cursor-pointer"
+            />
+          </label>
+        </div>
+
+        {/* Qari Default */}
+        <div className="space-y-2 pt-2 border-t border-[#1F2128]">
+          <h3 className="text-xs font-bold text-[#8A8D9A] uppercase tracking-wide flex items-center gap-2">
+            <Volume2 className="w-4 h-4 text-[#D4AF37]" />
+            <span>Qari Murottal Utama</span>
+          </h3>
+          <select
+            value={settings.selectedQariId}
+            onChange={(e) => onUpdateSettings({ selectedQariId: e.target.value })}
+            className="w-full p-2.5 text-xs rounded-xl border border-[#2A2D35] bg-[#0F1115] text-[#E2E2E2] font-medium focus:outline-none focus:border-[#D4AF37]"
+          >
+            {QARIS.map((q) => (
+              <option key={q.id} value={q.id}>
+                {q.name} ({q.style})
+              </option>
+            ))}
+          </select>
+        </div>
+
+        {/* Clear Cache */}
+        <div className="pt-2 border-t border-[#1F2128]">
+          <button
+            onClick={onClearCache}
+            className="w-full flex items-center justify-center gap-2 p-3 rounded-2xl bg-[#0F1115] border border-red-900/50 text-red-400 font-semibold text-xs hover:bg-red-950/20 transition cursor-pointer"
+          >
+            <Trash2 className="w-4 h-4" />
+            <span>Bersihkan Cache Data Surah</span>
+          </button>
+        </div>
+
+        <div className="pt-2 flex justify-end">
+          <button
+            onClick={onClose}
+            className="px-5 py-2.5 text-xs font-bold rounded-xl bg-[#D4AF37] text-[#0A0A0B] hover:bg-[#B8962D] shadow cursor-pointer"
+          >
+            Tutup
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};

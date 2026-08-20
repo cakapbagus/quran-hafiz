@@ -1,0 +1,161 @@
+@import url('https://fonts.googleapis.com/css2?family=Amiri:ital,wght@0,400;0,700;1,400&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Cinzel:wght@500;600;700&display=swap');
+@import "tailwindcss";
+
+:root {
+  --bg-app: #F8F6F0;
+  --bg-header: rgba(248, 246, 240, 0.96);
+  --bg-card: #FFFFFF;
+  --bg-card-hover: #F3EFE6;
+  --bg-surface: #FFFFFF;
+  --bg-surface-secondary: #EFEBE0;
+  --bg-input: #FFFFFF;
+  --bg-modal: #FFFFFF;
+  --text-main: #242831;
+  --text-muted: #5F6675;
+  --text-dim: #848B9B;
+  --border-main: #E5E0D4;
+  --border-subtle: #ECE7DC;
+  --gold-primary: #B8860B;
+  --gold-bg: rgba(184, 134, 11, 0.12);
+  --gold-border: rgba(184, 134, 11, 0.35);
+  --gold-text: #946700;
+  --gold-hover: #A57805;
+  --scrollbar-track: #F2EEE4;
+  --scrollbar-thumb: #D3CCC0;
+}
+
+html.dark, :root.dark {
+  --bg-app: #0A0A0B;
+  --bg-header: rgba(15, 17, 21, 0.96);
+  --bg-card: #15171E;
+  --bg-card-hover: #1A1C23;
+  --bg-surface: #0F1115;
+  --bg-surface-secondary: #1F2128;
+  --bg-input: #15171E;
+  --bg-modal: #15171E;
+  --text-main: #E2E2E2;
+  --text-muted: #8A8D9A;
+  --text-dim: #555866;
+  --border-main: #2A2D35;
+  --border-subtle: #1F2128;
+  --gold-primary: #D4AF37;
+  --gold-bg: rgba(212, 175, 55, 0.12);
+  --gold-border: rgba(212, 175, 55, 0.35);
+  --gold-text: #D4AF37;
+  --gold-hover: #E5C358;
+  --scrollbar-track: #0F1115;
+  --scrollbar-thumb: #2A2D35;
+}
+
+@layer base {
+  body {
+    background-color: var(--bg-app);
+    color: var(--text-main);
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    transition: background-color 0.25s ease, color 0.25s ease;
+  }
+}
+
+.font-serif-title {
+  font-family: 'Cinzel', serif;
+}
+
+.font-arabic {
+  font-family: 'Amiri', 'Traditional Arabic', serif;
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--scrollbar-track);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--scrollbar-thumb);
+  border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--gold-primary);
+}
+
+/* Theme Light Mode Overrides for hardcoded palette classes */
+:root:not(.dark) {
+  .bg-\[\#0A0A0B\], .bg-\[\#0a0a0b\] {
+    background-color: #F8F6F0 !important;
+  }
+  .bg-\[\#0F1115\], .bg-\[\#0f1115\] {
+    background-color: #FFFFFF !important;
+  }
+  .bg-\[\#0F1115\]\/95, .bg-\[\#0f1115\]\/95 {
+    background-color: rgba(248, 246, 240, 0.96) !important;
+  }
+  .bg-\[\#15171E\], .bg-\[\#15171e\] {
+    background-color: #FFFFFF !important;
+  }
+  .bg-\[\#1A1C23\], .bg-\[\#1a1c23\] {
+    background-color: #F3EFE6 !important;
+  }
+  .bg-\[\#1F2128\], .bg-\[\#1f2128\] {
+    background-color: #ECE7DC !important;
+  }
+  .bg-\[\#2A2D35\], .bg-\[\#2a2d35\] {
+    background-color: #E3DDD0 !important;
+  }
+  .text-\[\#E2E2E2\], .text-\[\#e2e2e2\] {
+    color: #242831 !important;
+  }
+  .text-\[\#8A8D9A\], .text-\[\#8a8d9a\] {
+    color: #5F6675 !important;
+  }
+  .text-\[\#6A6D7A\], .text-\[\#6a6d7a\] {
+    color: #808899 !important;
+  }
+  .border-\[\#2A2D35\], .border-\[\#2a2d35\] {
+    border-color: #E5E0D4 !important;
+  }
+  .border-\[\#1F2128\], .border-\[\#1f2128\] {
+    border-color: #ECE7DC !important;
+  }
+  .hover\:bg-\[\#1A1C23\]:hover, .hover\:bg-\[\#1a1c23\]:hover {
+    background-color: #EBE5D8 !important;
+  }
+  .hover\:bg-\[\#15171E\]:hover, .hover\:bg-\[\#15171e\]:hover {
+    background-color: #F5F1E8 !important;
+  }
+  .hover\:bg-\[\#2A2D35\]:hover, .hover\:bg-\[\#2a2d35\]:hover {
+    background-color: #E2DCCF !important;
+  }
+  .hover\:text-\[\#E2E2E2\]:hover, .hover\:text-\[\#e2e2e2\]:hover {
+    color: #181B21 !important;
+  }
+  .text-\[\#D4AF37\], .text-\[\#d4af37\] {
+    color: #9C6E05 !important;
+  }
+  .border-\[\#D4AF37\], .border-\[\#d4af37\] {
+    border-color: #B8860B !important;
+  }
+  .border-\[\#D4AF37\]\/40, .border-\[\#d4af37\]\/40 {
+    border-color: rgba(184, 134, 11, 0.4) !important;
+  }
+  .border-\[\#D4AF37\]\/50, .border-\[\#d4af37\]\/50 {
+    border-color: rgba(184, 134, 11, 0.5) !important;
+  }
+  .bg-\[\#D4AF37\], .bg-\[\#d4af37\] {
+    background-color: #B8860B !important;
+    color: #FFFFFF !important;
+  }
+  .bg-\[\#D4AF37\]\/10, .bg-\[\#d4af37\]\/10 {
+    background-color: rgba(184, 134, 11, 0.10) !important;
+  }
+  .bg-\[\#D4AF37\]\/15, .bg-\[\#d4af37\]\/15 {
+    background-color: rgba(184, 134, 11, 0.14) !important;
+  }
+  .bg-\[\#D4AF37\]\/20, .bg-\[\#d4af37\]\/20 {
+    background-color: rgba(184, 134, 11, 0.18) !important;
+  }
+}
