@@ -52,7 +52,7 @@ export const ColoredArabicVerse: React.FC<ColoredArabicVerseProps> = ({
         return (
           <span
             key={index}
-            className="transition-colors inline-block duration-150"
+            className="transition-colors duration-150"
             style={{ color: textColor }}
             title={token.label}
           >

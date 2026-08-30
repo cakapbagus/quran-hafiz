@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useDialogAccessibility } from '../hooks/useDialogAccessibility';
 import {
   X,
   Cloud,
@@ -45,11 +46,26 @@ import {
   buildBackupPayload
 } from '../services/googleDriveService';
 
+function backupDataMatchesLocal(
+  backup: CloudBackupPayload,
+  settings: UserSettings,
+  bookmarks: Bookmark[],
+  hafalanRecords: Record<string, HafalanVerseRecord>,
+  lastRead: LastRead | null
+): boolean {
+  const localData = buildBackupPayload(settings, bookmarks, hafalanRecords, lastRead).data;
+  const normalize = (data: CloudBackupPayload['data']) => {
+    const { customApiKey: _customApiKey, autoCloudSync: _autoCloudSync, ...safeSettings } = data.settings;
+    return { ...data, settings: safeSettings };
+  };
+  return JSON.stringify(normalize(backup.data)) === JSON.stringify(normalize(localData));
+}
+
 interface CloudSyncModalProps {
   isOpen: boolean;
   onClose: () => void;
   settings: UserSettings;
-  onUpdateSettings: (newSettings: Partial<UserSettings>) => void;
+
   bookmarks: Bookmark[];
   hafalanRecords: Record<string, HafalanVerseRecord>;
   lastRead: LastRead | null;
@@ -60,24 +76,26 @@ export const CloudSyncModal: React.FC<CloudSyncModalProps> = ({
   isOpen,
   onClose,
   settings,
-  onUpdateSettings,
+
   bookmarks,
   hafalanRecords,
   lastRead,
   onRestoreData
 }) => {
+  const dialogRef = useDialogAccessibility(onClose);
   const [token, setToken] = useState<string | null>(getStoredAccessToken());
   const [userProfile, setUserProfile] = useState<GoogleUserProfile | null>(getStoredGoogleUser());
   const [lastSyncedAt, setLastSyncedAt] = useState<string | null>(getStoredLastSyncedAt());
-  
+
   const [isLoadingAuth, setIsLoadingAuth] = useState<boolean>(false);
   const [isSyncingUpload, setIsSyncingUpload] = useState<boolean>(false);
   const [isSyncingDownload, setIsSyncingDownload] = useState<boolean>(false);
-  
+
   const [cloudFileInfo, setCloudFileInfo] = useState<{ id: string; modifiedTime: string; size?: number } | null>(null);
   const [isCheckingCloudFile, setIsCheckingCloudFile] = useState<boolean>(false);
-  
+
   const [statusMessage, setStatusMessage] = useState<{ type: 'success' | 'error' | 'info'; text: string } | null>(null);
+  const [conflictingBackup, setConflictingBackup] = useState<CloudBackupPayload | null>(null);
 
   // Check user info and cloud backup file when token is available
   useEffect(() => {
@@ -90,12 +108,27 @@ export const CloudSyncModal: React.FC<CloudSyncModalProps> = ({
       // Check existing backup file in Drive
       setIsCheckingCloudFile(true);
       findCloudBackupFile(token)
-        .then((file) => {
+        .then(async (file) => {
           setCloudFileInfo(file);
+          const lastSync = getStoredLastSyncedAt();
+          if (file && (!lastSync || new Date(file.modifiedTime).getTime() > new Date(lastSync).getTime() + 1000)) {
+            const backup = await downloadCloudBackup(token, file.id);
+            if (backupDataMatchesLocal(backup, settings, bookmarks, hafalanRecords, lastRead)) {
+              saveStoredLastSyncedAt(file.modifiedTime);
+              setLastSyncedAt(file.modifiedTime);
+            } else {
+              setConflictingBackup(backup);
+              setStatusMessage({
+                type: 'info',
+                text: 'Data Google Drive berbeda dari data lokal. Pilih data yang ingin dipertahankan sebelum sinkronisasi dilanjutkan.'
+              });
+            }
+          }
           setIsCheckingCloudFile(false);
         })
         .catch((err) => {
           console.warn('Failed to check cloud file:', err);
+          if (!getStoredAccessToken()) setToken(null);
           setIsCheckingCloudFile(false);
         });
     } else {
@@ -118,10 +151,31 @@ export const CloudSyncModal: React.FC<CloudSyncModalProps> = ({
         type: 'success',
         text: `Berhasil terhubung dengan Google Drive akun ${profile?.email || 'Anda'}!`
       });
-      
+
       // Auto check cloud backup file
       const file = await findCloudBackupFile(accessToken);
       setCloudFileInfo(file);
+      if (file) {
+        const backup = await downloadCloudBackup(accessToken, file.id);
+        if (backupDataMatchesLocal(backup, settings, bookmarks, hafalanRecords, lastRead)) {
+          saveStoredLastSyncedAt(file.modifiedTime);
+          setLastSyncedAt(file.modifiedTime);
+          setStatusMessage({ type: 'success', text: 'Data lokal dan Google Drive sudah sinkron.' });
+        } else {
+          setConflictingBackup(backup);
+          setStatusMessage({
+            type: 'info',
+            text: 'Ditemukan data Google Drive yang berbeda. Pilih data yang ingin dipertahankan.'
+          });
+        }
+      } else {
+        await uploadCloudBackup(
+          accessToken,
+          buildBackupPayload(settings, bookmarks, hafalanRecords, lastRead, profile?.email),
+          null
+        );
+        setLastSyncedAt(getStoredLastSyncedAt());
+      }
     } catch (err: any) {
       console.error('Google Sign In failed:', err);
       setStatusMessage({
@@ -140,6 +194,7 @@ export const CloudSyncModal: React.FC<CloudSyncModalProps> = ({
     setToken(null);
     setUserProfile(null);
     setCloudFileInfo(null);
+    setConflictingBackup(null);
     setStatusMessage({
       type: 'info',
       text: 'Akun Google telah diputuskan dari aplikasi.'
@@ -180,6 +235,7 @@ export const CloudSyncModal: React.FC<CloudSyncModalProps> = ({
       });
     } catch (err: any) {
       console.error('Backup failed:', err);
+      if (!getStoredAccessToken()) setToken(null);
       setStatusMessage({
         type: 'error',
         text: err?.message || 'Gagal mencadangkan data ke Google Drive.'
@@ -189,12 +245,44 @@ export const CloudSyncModal: React.FC<CloudSyncModalProps> = ({
     }
   };
 
+  const keepLocalData = async () => {
+    if (!token) return;
+    setIsSyncingUpload(true);
+    try {
+      const result = await uploadCloudBackup(
+        token,
+        buildBackupPayload(settings, bookmarks, hafalanRecords, lastRead, userProfile?.email),
+        cloudFileInfo?.id
+      );
+      setCloudFileInfo({ id: result.fileId, modifiedTime: result.modifiedTime, size: result.size });
+      setLastSyncedAt(result.modifiedTime);
+      setConflictingBackup(null);
+      setStatusMessage({ type: 'success', text: 'Data lokal dipertahankan dan telah disinkronkan ke Google Drive.' });
+    } catch (err: any) {
+      setStatusMessage({ type: 'error', text: err?.message || 'Gagal menyimpan data lokal ke Google Drive.' });
+    } finally {
+      setIsSyncingUpload(false);
+    }
+  };
+
+  const useDriveData = () => {
+    if (!conflictingBackup) return;
+    onRestoreData(conflictingBackup.data);
+    const syncedAt = cloudFileInfo?.modifiedTime || conflictingBackup.exportedAt;
+    saveStoredLastSyncedAt(syncedAt);
+    setLastSyncedAt(syncedAt);
+    setConflictingBackup(null);
+    setStatusMessage({ type: 'success', text: 'Data Google Drive diterapkan ke perangkat ini. Sinkronisasi otomatis dilanjutkan.' });
+  };
+
   // Handle Download / Restore
   const handleRestoreBackup = async () => {
     if (!token) {
       await handleConnectGoogle();
       return;
     }
+
+    if (!window.confirm('Pemulihan akan menimpa pengaturan, bookmark, progres hafalan, dan posisi baca lokal. Lanjutkan?')) return;
 
     setIsSyncingDownload(true);
     setStatusMessage(null);
@@ -219,6 +307,7 @@ export const CloudSyncModal: React.FC<CloudSyncModalProps> = ({
       });
     } catch (err: any) {
       console.error('Restore failed:', err);
+      if (!getStoredAccessToken()) setToken(null);
       setStatusMessage({
         type: 'error',
         text: err?.message || 'Gagal memulihkan data dari Google Drive.'
@@ -254,7 +343,7 @@ export const CloudSyncModal: React.FC<CloudSyncModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fade-in">
-      <div className="bg-[#15171E] rounded-3xl max-w-xl w-full p-6 sm:p-7 space-y-6 shadow-2xl border border-[#1F2128] max-h-[90vh] overflow-y-auto">
+      <div ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby="cloud-dialog-title" className="bg-[#15171E] rounded-3xl max-w-xl w-full p-6 sm:p-7 space-y-6 shadow-2xl border border-[#1F2128] max-h-[90vh] overflow-y-auto">
         {/* Header */}
         <div className="flex items-center justify-between pb-4 border-b border-[#1F2128]">
           <div className="flex items-center gap-3">
@@ -262,7 +351,7 @@ export const CloudSyncModal: React.FC<CloudSyncModalProps> = ({
               <Cloud className="w-5 h-5" />
             </div>
             <div>
-              <h2 className="text-lg font-bold text-[#E2E2E2] flex items-center gap-2 font-serif-title">
+              <h2 id="cloud-dialog-title" className="text-lg font-bold text-[#E2E2E2] flex items-center gap-2 font-serif-title">
                 Cloud Save Google Drive
               </h2>
               <p className="text-xs text-[#8A8D9A]">
@@ -272,6 +361,7 @@ export const CloudSyncModal: React.FC<CloudSyncModalProps> = ({
           </div>
           <button
             onClick={onClose}
+            aria-label="Tutup dialog"
             className="p-2 rounded-xl text-[#8A8D9A] hover:text-[#E2E2E2] hover:bg-[#1F2128] transition cursor-pointer"
           >
             <X className="w-5 h-5" />
@@ -297,6 +387,25 @@ export const CloudSyncModal: React.FC<CloudSyncModalProps> = ({
               <Sparkles className="w-4 h-4 text-[#D4AF37] shrink-0 mt-0.5" />
             )}
             <span className="leading-relaxed">{statusMessage.text}</span>
+          </div>
+        )}
+
+        {conflictingBackup && (
+          <div className="p-4 rounded-2xl bg-amber-950/30 border border-amber-700/50 space-y-3" role="alert">
+            <div>
+              <h3 className="text-sm font-bold text-amber-300">Konflik data ditemukan</h3>
+              <p className="text-[11px] text-amber-100/70 mt-1">
+                Cadangan Drive ({conflictingBackup.data.bookmarks.length} bookmark, {Object.keys(conflictingBackup.data.hafalanRecords).length} progres hafalan) berbeda dari data lokal ({bookmarks.length} bookmark, {Object.keys(hafalanRecords).length} progres hafalan).
+              </p>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              <button onClick={keepLocalData} disabled={isSyncingUpload} className="p-2.5 rounded-xl bg-[#D4AF37] text-[#0A0A0B] text-xs font-bold disabled:opacity-50 cursor-pointer">
+                Pertahankan Data Lokal
+              </button>
+              <button onClick={useDriveData} disabled={isSyncingUpload} className="p-2.5 rounded-xl bg-[#1A1C23] border border-amber-700/50 text-amber-200 text-xs font-bold disabled:opacity-50 cursor-pointer">
+                Gunakan Data Google Drive
+              </button>
+            </div>
           </div>
         )}
 
@@ -413,20 +522,22 @@ export const CloudSyncModal: React.FC<CloudSyncModalProps> = ({
         </div>
 
         {/* Section 3: Keamanan & Privasi Data */}
-        <div className="p-4 rounded-2xl bg-[#0F1115] border border-[#2A2D35] space-y-2">
-          <div className="flex items-center justify-between">
-            <h3 className="text-xs font-bold text-[#E2E2E2] flex items-center gap-2">
-              <Lock className="w-4 h-4 text-emerald-400" />
-              <span>Keamanan & Privasi Cloud Save</span>
-            </h3>
-            <span className="text-[10px] text-emerald-400 font-semibold px-2 py-0.5 rounded-full bg-emerald-950/40 border border-emerald-800/40">
-              Aman & Privat
-            </span>
+        {/*
+          <div className="p-4 rounded-2xl bg-[#0F1115] border border-[#2A2D35] space-y-2">
+            <div className="flex items-center justify-between">
+              <h3 className="text-xs font-bold text-[#E2E2E2] flex items-center gap-2">
+                <Lock className="w-4 h-4 text-emerald-400" />
+                <span>Keamanan & Privasi Cloud Save</span>
+              </h3>
+              <span className="text-[10px] text-emerald-400 font-semibold px-2 py-0.5 rounded-full bg-emerald-950/40 border border-emerald-800/40">
+                Aman & Privat
+              </span>
+            </div>
+            <p className="text-[11px] text-[#8A8D9A] leading-relaxed">
+              Data yang dicadangkan mencakup <strong>Pengaturan</strong>, <strong>Daftar Bookmark & Catatan</strong>, <strong>Riwayat Status Hafalan</strong>, serta <strong>Terakhir Dibaca</strong>.
+            </p>
           </div>
-          <p className="text-[11px] text-[#8A8D9A] leading-relaxed">
-            Data yang dicadangkan mencakup <strong>Pengaturan</strong>, <strong>Daftar Bookmark & Catatan</strong>, <strong>Riwayat Status Hafalan</strong>, serta <strong>Terakhir Dibaca</strong>. Kredensial API Key <em>tidak pernah disimpan</em> ke dalam Google Drive demi keamanan akun Anda.
-          </p>
-        </div>
+          */}
 
         {/* Section 4: Cloud Actions (Backup Now & Restore Data) */}
         <div className="space-y-3 pt-2">
@@ -434,7 +545,7 @@ export const CloudSyncModal: React.FC<CloudSyncModalProps> = ({
             {/* Backup Button */}
             <button
               onClick={handleUploadBackup}
-              disabled={isSyncingUpload || isSyncingDownload}
+              disabled={isSyncingUpload || isSyncingDownload || !!conflictingBackup}
               className="flex items-center justify-center gap-2 p-3.5 rounded-2xl bg-[#D4AF37] hover:bg-[#E5C358] text-[#0A0A0B] font-bold text-xs shadow-lg transition cursor-pointer disabled:opacity-50"
             >
               {isSyncingUpload ? (
@@ -448,7 +559,7 @@ export const CloudSyncModal: React.FC<CloudSyncModalProps> = ({
             {/* Restore Button */}
             <button
               onClick={handleRestoreBackup}
-              disabled={isSyncingUpload || isSyncingDownload || !token}
+              disabled={isSyncingUpload || isSyncingDownload || !token || !!conflictingBackup}
               className="flex items-center justify-center gap-2 p-3.5 rounded-2xl bg-[#1A1C23] hover:bg-[#2A2D35] text-[#E2E2E2] border border-[#2A2D35] font-semibold text-xs transition cursor-pointer disabled:opacity-40"
             >
               {isSyncingDownload ? (
@@ -470,26 +581,6 @@ export const CloudSyncModal: React.FC<CloudSyncModalProps> = ({
               <span>{formatTimestamp(cloudFileInfo.modifiedTime)}</span>
             </div>
           )}
-        </div>
-
-        {/* Section 5: Auto-Sync Option */}
-        <div className="pt-3 border-t border-[#1F2128]">
-          <label className="flex items-center justify-between p-3.5 rounded-2xl bg-[#0F1115] border border-[#2A2D35] cursor-pointer">
-            <div>
-              <span className="text-xs font-semibold text-[#E2E2E2] block">
-                Sinkronisasi Otomatis
-              </span>
-              <span className="text-[10px] text-[#8A8D9A]">
-                Otomatis mengunggah perubahan hafalan & bookmark ke Google Drive
-              </span>
-            </div>
-            <input
-              type="checkbox"
-              checked={!!settings.autoCloudSync}
-              onChange={(e) => onUpdateSettings({ autoCloudSync: e.target.checked })}
-              className="w-4 h-4 accent-[#D4AF37] rounded cursor-pointer"
-            />
-          </label>
         </div>
 
         {/* Footer */}

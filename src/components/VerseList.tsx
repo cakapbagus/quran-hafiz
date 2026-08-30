@@ -1,6 +1,9 @@
-import React, { useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
+import { useDialogAccessibility } from '../hooks/useDialogAccessibility';
+import { getMushafPage } from '../data/mushafPages';
 import { SurahDetail, Verse, UserSettings, HafalanVerseRecord, AudioPlaybackState } from '../types';
 import { ColoredArabicVerse } from './ColoredArabicVerse';
+import { MushafArabicText, toArabicNumerals } from './MushafArabicText';
 import {
   Play,
   Pause,
@@ -34,6 +37,7 @@ interface VerseListProps {
   onOpenVoiceRecorder: (verseNumber: number) => void;
   onNavigateSurah: (surahNumber: number) => void;
   activePlayingVerse: number | null;
+  targetVerseNumber?: number | null;
 }
 
 export const VerseList: React.FC<VerseListProps> = ({
@@ -49,12 +53,47 @@ export const VerseList: React.FC<VerseListProps> = ({
   onOpenHafalanModeForVerse,
   onOpenVoiceRecorder,
   onNavigateSurah,
-  activePlayingVerse
+  activePlayingVerse,
+  targetVerseNumber
 }) => {
   const [bookmarkNoteModalVerse, setBookmarkNoteModalVerse] = useState<Verse | null>(null);
   const [noteInput, setNoteInput] = useState('');
   const [copiedVerseNum, setCopiedVerseNum] = useState<number | null>(null);
   const [maskedVerses, setMaskedVerses] = useState<Record<number, boolean>>({});
+  const [selectedMushafVerseNumber, setSelectedMushafVerseNumber] = useState<number | null>(null);
+  const firstMushafPage = getMushafPage(surahDetail.nomor, surahDetail.ayat[0]?.nomorAyat ?? 1);
+  const [currentMushafPage, setCurrentMushafPage] = useState(firstMushafPage);
+  const bookmarkDialogRef = useDialogAccessibility(() => setBookmarkNoteModalVerse(null), Boolean(bookmarkNoteModalVerse));
+
+  const mushafPages = useMemo(
+    () => Array.from(new Set(surahDetail.ayat.map((verse) => getMushafPage(surahDetail.nomor, verse.nomorAyat)))),
+    [surahDetail]
+  );
+  const visibleVerses = useMemo(
+    () => surahDetail.ayat.filter((verse) => getMushafPage(surahDetail.nomor, verse.nomorAyat) === currentMushafPage),
+    [currentMushafPage, surahDetail]
+  );
+  const currentPageIndex = Math.max(0, mushafPages.indexOf(currentMushafPage));
+
+  useEffect(() => {
+    const firstPage = getMushafPage(surahDetail.nomor, surahDetail.ayat[0]?.nomorAyat ?? 1);
+    setCurrentMushafPage(firstPage);
+    setSelectedMushafVerseNumber(null);
+  }, [surahDetail.nomor]);
+
+  useEffect(() => {
+    const targetVerse = activePlayingVerse ?? targetVerseNumber;
+    if (targetVerse == null) return;
+    setCurrentMushafPage(getMushafPage(surahDetail.nomor, targetVerse));
+  }, [activePlayingVerse, surahDetail.nomor, targetVerseNumber]);
+
+  useEffect(() => {
+    const targetVerse = activePlayingVerse ?? targetVerseNumber;
+    if (targetVerse == null || getMushafPage(surahDetail.nomor, targetVerse) !== currentMushafPage) return;
+    window.requestAnimationFrame(() => {
+      document.getElementById(`verse-${surahDetail.nomor}-${targetVerse}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    });
+  }, [activePlayingVerse, currentMushafPage, surahDetail.nomor, targetVerseNumber]);
 
   const handleBookmarkClick = (verse: Verse) => {
     if (isBookmarked(verse.nomorAyat)) {
@@ -74,9 +113,12 @@ export const VerseList: React.FC<VerseListProps> = ({
 
   const copyVerseToClipboard = (verse: Verse) => {
     const textToCopy = `${verse.teksArab}\n\n"${verse.teksIndonesia}"\n(QS. ${surahDetail.namaLatin}: ${verse.nomorAyat})`;
-    navigator.clipboard.writeText(textToCopy);
-    setCopiedVerseNum(verse.nomorAyat);
-    setTimeout(() => setCopiedVerseNum(null), 2000);
+    navigator.clipboard.writeText(textToCopy)
+      .then(() => {
+        setCopiedVerseNum(verse.nomorAyat);
+        setTimeout(() => setCopiedVerseNum(null), 2000);
+      })
+      .catch((error) => console.warn('Gagal menyalin ayat:', error));
   };
 
   const toggleVerseMasking = (verseNum: number) => {
@@ -85,6 +127,57 @@ export const VerseList: React.FC<VerseListProps> = ({
       [verseNum]: !prev[verseNum]
     }));
   };
+
+  const selectedMushafVerse = visibleVerses.find(
+    (verse) => verse.nomorAyat === selectedMushafVerseNumber
+  ) ?? null;
+
+  const changeMushafPage = (page: number) => {
+    setCurrentMushafPage(page);
+    setSelectedMushafVerseNumber(null);
+    window.setTimeout(() => {
+      document.getElementById('quran-page-content')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 0);
+  };
+
+  const renderPageNavigation = (label: string) => (
+    <nav className="grid grid-cols-2 items-center gap-2 rounded-2xl border border-[#2A2D35] bg-[#15171E] p-3 sm:grid-cols-[1fr_auto_1fr] sm:gap-3 sm:px-4" aria-label={label}>
+      <button
+        type="button"
+        onClick={() => changeMushafPage(mushafPages[currentPageIndex - 1])}
+        disabled={currentPageIndex === 0}
+        className="inline-flex min-h-10 w-full items-center justify-center gap-1 rounded-xl border border-[#2A2D35] bg-[#0F1115] px-2 py-2 text-xs font-bold text-[#E2E2E2] transition hover:border-[#D4AF37] hover:text-[#D4AF37] disabled:cursor-not-allowed disabled:opacity-35 sm:w-auto sm:justify-self-start sm:px-3"
+        aria-label="Halaman mushaf sebelumnya"
+      >
+        <ChevronLeft className="h-4 w-4" />
+        Sebelumnya
+      </button>
+
+      <label className="order-first col-span-2 flex min-h-9 items-center justify-center gap-2 text-xs font-semibold text-[#8A8D9A] sm:order-0 sm:col-span-1">
+        <span>Halaman Mushaf</span>
+        <select
+          value={currentMushafPage}
+          onChange={(event) => changeMushafPage(Number(event.target.value))}
+          className="rounded-lg border border-[#D4AF37]/45 bg-[#0F1115] px-2.5 py-1.5 font-bold text-[#D4AF37] outline-none focus:border-[#D4AF37]"
+          aria-label="Pilih halaman mushaf"
+        >
+          {mushafPages.map((page) => <option key={page} value={page}>{page}</option>)}
+        </select>
+        <span>/ 604</span>
+      </label>
+
+      <button
+        type="button"
+        onClick={() => changeMushafPage(mushafPages[currentPageIndex + 1])}
+        disabled={currentPageIndex === mushafPages.length - 1}
+        className="inline-flex min-h-10 w-full items-center justify-center gap-1 rounded-xl border border-[#2A2D35] bg-[#0F1115] px-2 py-2 text-xs font-bold text-[#E2E2E2] transition hover:border-[#D4AF37] hover:text-[#D4AF37] disabled:cursor-not-allowed disabled:opacity-35 sm:w-auto sm:justify-self-end sm:px-3"
+        aria-label="Halaman mushaf berikutnya"
+      >
+        Berikutnya
+        <ChevronRight className="h-4 w-4" />
+      </button>
+    </nav>
+  );
 
   return (
     <div className="max-w-4xl mx-auto space-y-6 pb-28">
@@ -114,8 +207,8 @@ export const VerseList: React.FC<VerseListProps> = ({
           {/* Bismillah Frame */}
           {surahDetail.nomor !== 9 && (
             <div className="pt-4 pb-1">
-              <div className="inline-block py-2 px-6 rounded-2xl bg-[#15171E] border border-[#2A2D35]">
-                <span className="font-arabic text-2xl sm:text-3xl text-[#D4AF37] tracking-wide">
+              <div className="inline-flex min-h-16 max-w-full items-center justify-center py-3 px-6 sm:px-8 rounded-2xl bg-[#15171E] border border-[#2A2D35]">
+                <span dir="rtl" className="block font-arabic text-2xl sm:text-3xl leading-[1.8] text-[#D4AF37] tracking-wide">
                   بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ
                 </span>
               </div>
@@ -144,8 +237,11 @@ export const VerseList: React.FC<VerseListProps> = ({
       </div>
 
       {/* Verses List */}
+      {renderPageNavigation('Navigasi halaman mushaf bagian atas')}
+      <div id="quran-page-content" className="scroll-mt-24">
+      {settings.readDisplayMode === 'verse' ? (
       <div className="space-y-4">
-        {surahDetail.ayat.map((verse) => {
+        {visibleVerses.map((verse) => {
           const isCurrentPlaying = activePlayingVerse === verse.nomorAyat && playbackState.isPlaying;
           const bookmarked = isBookmarked(verse.nomorAyat);
           const hafalanRecord = hafalanRecords[`${surahDetail.nomor}_${verse.nomorAyat}`];
@@ -207,7 +303,7 @@ export const VerseList: React.FC<VerseListProps> = ({
                         ? 'bg-[#D4AF37] text-[#0A0A0B] shadow-md animate-pulse'
                         : 'bg-[#0F1115] text-[#D4AF37] border border-[#2A2D35] hover:bg-[#D4AF37] hover:text-[#0A0A0B]'
                     }`}
-                    title={isCurrentPlaying ? 'Jeda Audio' : 'Putar Audio Ayat'}
+                    aria-label={isCurrentPlaying ? 'Jeda audio' : 'Putar audio ayat'}
                   >
                     {isCurrentPlaying ? (
                       <Pause className="w-4 h-4 fill-current" />
@@ -313,6 +409,122 @@ export const VerseList: React.FC<VerseListProps> = ({
           );
         })}
       </div>
+      ) : (
+        <div className="space-y-4">
+          <section className="mushaf-page overflow-hidden rounded-4xl border shadow-2xl shadow-black/10 transition-colors duration-300">
+            <div className="mushaf-header border-b px-5 py-5 text-center transition-colors duration-300 sm:px-10">
+              <div className="mushaf-ornament mx-auto flex max-w-2xl items-center gap-4">
+                <span className="mushaf-ornament-line h-px flex-1" />
+                <Scroll className="h-5 w-5" />
+                <span className="mushaf-ornament-line h-px flex-1" />
+              </div>
+              <h2 className="mushaf-title font-arabic text-4xl font-bold leading-relaxed sm:text-5xl" dir="rtl">
+                {surahDetail.nama}
+              </h2>
+              <p className="mushaf-meta text-xs font-semibold uppercase tracking-[0.22em]">
+                {surahDetail.namaLatin} · {surahDetail.arti}
+              </p>
+              <p className="mushaf-hint mt-1 text-[11px]">Klik ayat untuk membuka kontrol dan terjemahan</p>
+            </div>
+
+            <div className="relative px-5 py-8 sm:px-10 sm:py-12">
+              <div className="mushaf-frame pointer-events-none absolute inset-3 rounded-[1.35rem] border" />
+              {currentMushafPage === firstMushafPage && surahDetail.nomor !== 1 && surahDetail.nomor !== 9 && (
+                <p className="mushaf-bismillah relative mb-5 text-center font-arabic text-3xl font-semibold leading-loose sm:text-4xl" dir="rtl">
+                  بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ
+                </p>
+              )}
+              <div
+                className="mushaf-text relative text-justify font-arabic font-semibold leading-[2.35] sm:leading-[2.5]"
+                style={{ fontSize: `${settings.arabicFontSize}px` }}
+                dir="rtl"
+                lang="ar"
+              >
+                {visibleVerses.map((verse) => {
+                  const isCurrentPlaying = activePlayingVerse === verse.nomorAyat && playbackState.isPlaying;
+                  const isSelected = selectedMushafVerseNumber === verse.nomorAyat;
+                  return (
+                    <span
+                      key={verse.nomorAyat}
+                      id={`verse-${surahDetail.nomor}-${verse.nomorAyat}`}
+                      role="button"
+                      tabIndex={0}
+                      aria-label={`Ayat ${verse.nomorAyat}. Klik untuk membuka kontrol dan terjemahan`}
+                      aria-pressed={isSelected}
+                      onClick={() => setSelectedMushafVerseNumber(verse.nomorAyat)}
+                      onKeyDown={(event) => {
+                        if (event.key === 'Enter' || event.key === ' ') {
+                          event.preventDefault();
+                          setSelectedMushafVerseNumber(verse.nomorAyat);
+                        }
+                      }}
+                      className={`box-decoration-clone cursor-pointer rounded-lg px-1 outline-none transition-all focus-visible:ring-2 focus-visible:ring-[#B8860B] ${
+                        isCurrentPlaying
+                          ? 'bg-[#D4AF37]/30 shadow-[0_0_0_2px_rgba(184,134,11,0.2)]'
+                          : isSelected ? 'bg-[#D4AF37]/18' : 'hover:bg-[#D4AF37]/10'
+                      }`}
+                    >
+                      <MushafArabicText text={verse.teksArab} enableTajwid={settings.enableColoredTajwid ?? true} />{' '}
+                      <span className="mushaf-verse-number whitespace-nowrap font-arabic font-bold" aria-hidden="true">
+                        ﴿{toArabicNumerals(verse.nomorAyat)}﴾
+                      </span>{' '}
+                    </span>
+                  );
+                })}
+              </div>
+            </div>
+          </section>
+
+          {selectedMushafVerse && (() => {
+            const verse = selectedMushafVerse;
+            const isCurrentPlaying = activePlayingVerse === verse.nomorAyat && playbackState.isPlaying;
+            const bookmarked = isBookmarked(verse.nomorAyat);
+            const hafalanRecord = hafalanRecords[`${surahDetail.nomor}_${verse.nomorAyat}`];
+            return (
+              <section className="rounded-3xl border border-[#D4AF37]/35 bg-[#15171E] p-5 shadow-xl sm:p-6" aria-label={`Detail ayat ${verse.nomorAyat}`}>
+                <div className="mb-4 flex flex-wrap items-center justify-between gap-3 border-b border-[#2A2D35] pb-4">
+                  <div className="flex items-center gap-3">
+                    <span className="flex h-10 w-10 items-center justify-center rounded-full border border-[#D4AF37]/40 bg-[#D4AF37]/10 font-bold text-[#D4AF37]">{verse.nomorAyat}</span>
+                    <div>
+                      <h3 className="font-bold text-[#E2E2E2]">QS. {surahDetail.namaLatin}:{verse.nomorAyat}</h3>
+                      <p className="text-xs text-[#8A8D9A]">Kontrol, latin, dan terjemahan ayat</p>
+                    </div>
+                  </div>
+                  <div className="flex gap-2">
+                    <button onClick={() => isCurrentPlaying ? onPauseAudio() : onPlayVerse(verse.nomorAyat)} className={`rounded-xl border p-2 ${isCurrentPlaying ? 'border-[#D4AF37] bg-[#D4AF37] text-[#0A0A0B]' : 'border-[#2A2D35] bg-[#0F1115] text-[#D4AF37]'}`} aria-label={isCurrentPlaying ? 'Jeda audio' : 'Putar audio ayat'}>
+                      {isCurrentPlaying ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
+                    </button>
+                    <button onClick={() => handleBookmarkClick(verse)} className={`rounded-xl border p-2 ${bookmarked ? 'border-[#D4AF37] bg-[#D4AF37] text-[#0A0A0B]' : 'border-[#2A2D35] bg-[#0F1115] text-[#8A8D9A]'}`} aria-label={bookmarked ? 'Hapus bookmark' : 'Tambah bookmark'}>
+                      <BookmarkIcon className={`h-4 w-4 ${bookmarked ? 'fill-current' : ''}`} />
+                    </button>
+                    <button onClick={() => onOpenVoiceRecorder(verse.nomorAyat)} className="rounded-xl border border-[#2A2D35] bg-[#0F1115] p-2 text-[#D4AF37]" aria-label="Rekam suara hafalan">
+                      <Mic className="h-4 w-4" />
+                    </button>
+                  </div>
+                </div>
+                {settings.showLatin && verse.teksLatin && <p className="italic leading-relaxed text-[#D4AF37]" style={{ fontSize: `${settings.latinFontSize}px` }}>{verse.teksLatin}</p>}
+                {settings.showTranslation && verse.teksIndonesia && <p className="mt-2 text-sm leading-relaxed text-[#B5B8C2]">{verse.teksIndonesia}</p>}
+                <div className="mt-4 border-t border-[#2A2D35] pt-4">
+                  <select
+                    value={hafalanRecord?.status || 'not_started'}
+                    onChange={(event) => onUpdateHafalanStatus(verse.nomorAyat, event.target.value as HafalanVerseRecord['status'])}
+                    className="rounded-xl border border-[#2A2D35] bg-[#0F1115] px-3 py-2 text-xs font-semibold text-[#E2E2E2] outline-none focus:border-[#D4AF37]"
+                    aria-label={`Status hafalan ayat ${verse.nomorAyat}`}
+                  >
+                    <option value="not_started">⚪ Belum Dihafal</option>
+                    <option value="in_progress">🔵 Sedang Dihafal</option>
+                    <option value="review_needed">🟠 Perlu Muroja'ah</option>
+                    <option value="memorized">🟢 Mutqin (Lancar)</option>
+                  </select>
+                </div>
+              </section>
+            );
+          })()}
+        </div>
+      )}
+      </div>
+
+      {renderPageNavigation('Navigasi halaman mushaf bagian bawah')}
 
       {/* Navigation Footer for Next / Previous Surah */}
       <div className="flex items-center justify-between gap-4 pt-8 border-t border-[#1F2128]">
@@ -344,8 +556,8 @@ export const VerseList: React.FC<VerseListProps> = ({
       {/* Bookmark Note Modal */}
       {bookmarkNoteModalVerse && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-md animate-fade-in">
-          <div className="bg-[#0F1115] rounded-3xl max-w-md w-full p-6 space-y-4 shadow-2xl border border-[#1F2128]">
-            <h3 className="text-lg font-bold text-[#E2E2E2] flex items-center gap-2">
+          <div ref={bookmarkDialogRef} role="dialog" aria-modal="true" aria-labelledby="bookmark-dialog-title" className="bg-[#0F1115] rounded-3xl max-w-md w-full p-6 space-y-4 shadow-2xl border border-[#1F2128]">
+            <h3 id="bookmark-dialog-title" className="text-lg font-bold text-[#E2E2E2] flex items-center gap-2">
               <BookmarkIcon className="w-5 h-5 text-[#D4AF37] fill-current" />
               <span>Tambah Bookmark</span>
             </h3>

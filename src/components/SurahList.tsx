@@ -45,6 +45,17 @@ export const SurahList: React.FC<SurahListProps> = ({
     });
   }, [searchQuery, selectedJuz, selectedType]);
 
+  const surahTypeCounts = useMemo(() => {
+    const mekkah = ALL_SURAHS.filter((surah) => surah.tempatTurun === 'Mekkah').length;
+    const madinah = ALL_SURAHS.filter((surah) => surah.tempatTurun === 'Madinah').length;
+
+    return {
+      mekkah,
+      madinah,
+      total: ALL_SURAHS.length
+    };
+  }, []);
+
   // Calculate memorized stats per surah
   const getSurahHafalanStats = (surahNumber: number, totalAyat: number) => {
     let memorizedCount = 0;
@@ -88,7 +99,7 @@ export const SurahList: React.FC<SurahListProps> = ({
                 : 'text-[#8A8D9A] hover:text-[#E2E2E2] hover:bg-[#1A1C23]'
             }`}
           >
-            Semua (114)
+            Semua ({surahTypeCounts.total})
           </button>
           <button
             onClick={() => setSelectedType('Mekkah')}
@@ -98,7 +109,7 @@ export const SurahList: React.FC<SurahListProps> = ({
                 : 'text-[#8A8D9A] hover:text-[#E2E2E2] hover:bg-[#1A1C23]'
             }`}
           >
-            Makkiyah
+            Makkiyah ({surahTypeCounts.mekkah})
           </button>
           <button
             onClick={() => setSelectedType('Madinah')}
@@ -108,7 +119,7 @@ export const SurahList: React.FC<SurahListProps> = ({
                 : 'text-[#8A8D9A] hover:text-[#E2E2E2] hover:bg-[#1A1C23]'
             }`}
           >
-            Madaniyah
+            Madaniyah ({surahTypeCounts.madinah})
           </button>
         </div>
 

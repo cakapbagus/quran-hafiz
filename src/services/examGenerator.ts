@@ -7,8 +7,7 @@ import {
   Verse,
   WordScrambleItem
 } from '../types';
-import { ALL_SURAHS } from '../data/surahList';
-import { getSurahsForJuzRange, ALL_JUZ_DATA } from '../data/juzData';
+import { getSurahsForJuzRange, isVerseInJuzRange } from '../data/juzData';
 import { fetchSurahDetail } from './quranApi';
 import { getVerseAudioUrl } from '../data/qaris';
 
@@ -28,7 +27,56 @@ const COMMON_FAWASIL = [
   'تُوَفَّىٰ كُلُّ نَفْسٍ'
 ];
 
+function normalizeArabic(text: string): string {
+  return text
+    .replace(/[\u064B-\u065F\u0670]/g, '')
+    .replace(/[^\u0621-\u063A\u0641-\u064A\s]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function calculateArabicSimilarity(first: string, second: string): number {
+  const normalizedFirst = normalizeArabic(first);
+  const normalizedSecond = normalizeArabic(second);
+  if (!normalizedFirst || !normalizedSecond) return 0;
+  if (normalizedFirst === normalizedSecond) return 1;
+
+  const firstBigrams = Array.from({ length: Math.max(0, normalizedFirst.length - 1) }, (_, index) =>
+    normalizedFirst.slice(index, index + 2)
+  );
+  const remainingSecondBigrams = Array.from({ length: Math.max(0, normalizedSecond.length - 1) }, (_, index) =>
+    normalizedSecond.slice(index, index + 2)
+  );
+  let matchingBigrams = 0;
+
+  for (const bigram of firstBigrams) {
+    const matchIndex = remainingSecondBigrams.indexOf(bigram);
+    if (matchIndex >= 0) {
+      matchingBigrams++;
+      remainingSecondBigrams.splice(matchIndex, 1);
+    }
+  }
+
+  const bigramScore = firstBigrams.length + remainingSecondBigrams.length + matchingBigrams === 0
+    ? 0
+    : (2 * matchingBigrams) / (firstBigrams.length + remainingSecondBigrams.length + matchingBigrams);
+  const firstWords = new Set(normalizedFirst.split(' '));
+  const secondWords = new Set(normalizedSecond.split(' '));
+  const matchingWords = [...firstWords].filter((word) => secondWords.has(word)).length;
+  const wordScore = matchingWords / Math.max(firstWords.size, secondWords.size);
+
+  return (bigramScore * 0.7) + (wordScore * 0.3);
+}
+
+function validateExamConfig(config: ExamConfig): void {
+  if (!Number.isInteger(config.questionCount) || config.questionCount < 1 || config.questionCount > 50) throw new Error('Jumlah soal harus antara 1 dan 50.');
+  if (config.allowedTypes.length === 0) throw new Error('Pilih minimal satu jenis soal.');
+  if (config.scopeType === 'juz_range' && ((config.startJuzNumber || 1) > (config.endJuzNumber || 30))) throw new Error('Juz awal tidak boleh melewati juz akhir.');
+  if (config.scopeType === 'custom_range' && ((config.customStartVerse || 1) > (config.customEndVerse || 1))) throw new Error('Ayat awal tidak boleh melewati ayat akhir.');
+}
+
 export async function generateExamQuestions(config: ExamConfig): Promise<ExamQuestion[]> {
+  validateExamConfig(config);
   const surahsToLoad: number[] = [];
 
   if (config.scopeType === 'juz_range') {
@@ -53,9 +101,7 @@ export async function generateExamQuestions(config: ExamConfig): Promise<ExamQue
     surahsToLoad.push(config.selectedSurahNumber || 67);
   }
 
-  // Pick up to 8 surahs to fetch detail for variety and fast response
-  const sampleCount = Math.min(surahsToLoad.length, Math.max(4, Math.ceil(config.questionCount / 2)));
-  const selectedSurahIds = shuffleArray(surahsToLoad).slice(0, sampleCount);
+  const selectedSurahIds = [...new Set(surahsToLoad)];
   const loadedSurahs: SurahDetail[] = [];
 
   for (const sNum of selectedSurahIds) {
@@ -77,6 +123,15 @@ export async function generateExamQuestions(config: ExamConfig): Promise<ExamQue
     }
   }
 
+  const selectedJuzRange: [number, number] | null =
+    config.scopeType === 'juz_range'
+      ? [config.startJuzNumber || 1, config.endJuzNumber || 5]
+      : config.scopeType === 'juz'
+        ? [config.selectedJuzNumber || 30, config.selectedJuzNumber || 30]
+        : config.scopeType === 'juz_amma'
+          ? [30, 30]
+          : null;
+
   // Collect all candidate verses
   interface CandidateVerse {
     surah: SurahDetail;
@@ -87,7 +142,10 @@ export async function generateExamQuestions(config: ExamConfig): Promise<ExamQue
   const allCandidateVerses: CandidateVerse[] = [];
   for (const s of loadedSurahs) {
     s.ayat.forEach((v, idx) => {
-      // Filter if custom range in single surah
+      if (selectedJuzRange && !isVerseInJuzRange(s.nomor, v.nomorAyat, ...selectedJuzRange)) {
+        return;
+      }
+
       if (config.scopeType === 'custom_range' && config.customStartVerse && config.customEndVerse) {
         if (v.nomorAyat >= config.customStartVerse && v.nomorAyat <= config.customEndVerse) {
           allCandidateVerses.push({ surah: s, verse: v, indexInSurah: idx });
@@ -99,9 +157,7 @@ export async function generateExamQuestions(config: ExamConfig): Promise<ExamQue
   }
 
   if (allCandidateVerses.length === 0) {
-    loadedSurahs[0].ayat.forEach((v, idx) => {
-      allCandidateVerses.push({ surah: loadedSurahs[0], verse: v, indexInSurah: idx });
-    });
+    throw new Error('Tidak ada ayat yang tersedia dalam cakupan ujian yang dipilih.');
   }
 
   const questions: ExamQuestion[] = [];
@@ -122,7 +178,10 @@ export async function generateExamQuestions(config: ExamConfig): Promise<ExamQue
     }
   }
 
-  return questions.slice(0, config.questionCount);
+  if (questions.length < config.questionCount) {
+    throw new Error('Kandidat ayat tidak cukup untuk jumlah soal yang dipilih.');
+  }
+  return questions;
 }
 
 function buildQuestionForType(
@@ -150,7 +209,7 @@ function buildQuestionForType(
 
     // Generate 3 distractors
     const distractors: string[] = [];
-    const otherCandidates = shuffleArray(allCandidates.filter((c) => c.verse.nomorAyat !== verse.nomorAyat));
+    const otherCandidates = shuffleArray(allCandidates.filter((c) => c.surah.nomor !== surah.nomor || c.verse.nomorAyat !== verse.nomorAyat));
 
     for (const other of otherCandidates) {
       if (distractors.length >= 3) break;
@@ -197,15 +256,18 @@ function buildQuestionForType(
   if (type === 'next_verse') {
     // Needs next verse in the same surah
     const nextVerse = surah.ayat[indexInSurah + 1];
-    if (!nextVerse) {
+    const nextVerseIsInScope = nextVerse && allCandidates.some(
+      (candidate) => candidate.surah.nomor === surah.nomor && candidate.verse.nomorAyat === nextVerse.nomorAyat
+    );
+    if (!nextVerse || !nextVerseIsInScope) {
       return buildQuestionForType('guess_surah', item, allLoadedSurahs, allCandidates, config);
     }
 
     const distractors: Verse[] = [];
     const otherVerses = shuffleArray(
       allCandidates
+        .filter((c) => c.surah.nomor !== surah.nomor || (c.verse.nomorAyat !== nextVerse.nomorAyat && c.verse.nomorAyat !== verse.nomorAyat))
         .map((c) => c.verse)
-        .filter((v) => v.nomorAyat !== nextVerse.nomorAyat && v.nomorAyat !== verse.nomorAyat)
     );
 
     for (const ov of otherVerses) {
@@ -245,14 +307,42 @@ function buildQuestionForType(
   }
 
   if (type === 'guess_surah') {
-    // Guess which Surah and Verse this is
-    const distractors: Array<{ surahName: string; verseNum: number }> = [];
-    const otherSurahs = shuffleArray(ALL_SURAHS.filter((s) => s.nomor !== surah.nomor));
+    // Similar locations make the answer less obvious while keeping real verse positions.
+    const sameSurahCandidates = allCandidates
+      .filter((candidate) => candidate.surah.nomor === surah.nomor && candidate.verse.nomorAyat !== verse.nomorAyat)
+      .map((candidate) => ({ surahName: candidate.surah.namaLatin, verseNum: candidate.verse.nomorAyat }));
+    const otherSurahCandidates = allCandidates
+      .filter((candidate) => candidate.surah.nomor !== surah.nomor)
+      .map((candidate) => ({ surahName: candidate.surah.namaLatin, verseNum: candidate.verse.nomorAyat }));
 
-    for (let i = 0; i < 3; i++) {
-      const otherS = otherSurahs[i % otherSurahs.length];
-      const randomVerseNum = Math.min(otherS.jumlahAyat, Math.floor(Math.random() * otherS.jumlahAyat) + 1);
-      distractors.push({ surahName: otherS.namaLatin, verseNum: randomVerseNum });
+    const difficulty = config.difficulty || 'medium';
+    const orderedCandidates = difficulty === 'hard'
+      ? [
+          ...sameSurahCandidates.sort(
+            (a, b) => Math.abs(a.verseNum - verse.nomorAyat) - Math.abs(b.verseNum - verse.nomorAyat)
+          ),
+          ...shuffleArray(otherSurahCandidates)
+        ]
+      : difficulty === 'easy'
+        ? [...shuffleArray(otherSurahCandidates), ...shuffleArray(sameSurahCandidates)]
+        : [...shuffleArray(sameSurahCandidates), ...shuffleArray(otherSurahCandidates)];
+
+    const distractors: Array<{ surahName: string; verseNum: number }> = [];
+    for (const candidate of orderedCandidates) {
+      if (distractors.length >= 3) break;
+      if (!distractors.some((item) => item.surahName === candidate.surahName && item.verseNum === candidate.verseNum)) {
+        distractors.push(candidate);
+      }
+    }
+
+    // A very narrow custom range may not contain three distractors.
+    for (let offset = 1; distractors.length < 3 && offset <= surah.jumlahAyat; offset++) {
+      for (const verseNum of [verse.nomorAyat - offset, verse.nomorAyat + offset]) {
+        if (verseNum < 1 || verseNum > surah.jumlahAyat || distractors.length >= 3) continue;
+        if (!distractors.some((item) => item.surahName === surah.namaLatin && item.verseNum === verseNum)) {
+          distractors.push({ surahName: surah.namaLatin, verseNum });
+        }
+      }
     }
 
     const optionsList = shuffleArray([
@@ -335,7 +425,30 @@ function buildQuestionForType(
     const bodyWords = words.slice(0, words.length - lastWordsCount).join(' ');
     const endingWords = words.slice(words.length - lastWordsCount).join(' ');
 
-    const distractors = COMMON_FAWASIL.filter((f) => f !== endingWords).slice(0, 3);
+    const similarEndings = allCandidates
+      .filter((candidate) => candidate.surah.nomor !== surah.nomor || candidate.verse.nomorAyat !== verse.nomorAyat)
+      .map((candidate) => {
+        const candidateWords = candidate.verse.teksArab.trim().split(/\s+/);
+        const ending = candidateWords.slice(-Math.min(lastWordsCount, candidateWords.length)).join(' ');
+        return {
+          ending,
+          similarity: calculateArabicSimilarity(endingWords, ending)
+        };
+      })
+      .filter((candidate) => candidate.ending && candidate.ending !== endingWords)
+      .sort((a, b) => b.similarity - a.similarity);
+
+    const distractors: string[] = [];
+    for (const candidate of similarEndings) {
+      if (distractors.length >= 3) break;
+      if (!distractors.includes(candidate.ending)) distractors.push(candidate.ending);
+    }
+
+    for (const fallback of COMMON_FAWASIL) {
+      if (distractors.length >= 3) break;
+      if (fallback !== endingWords && !distractors.includes(fallback)) distractors.push(fallback);
+    }
+
     const optionsList = shuffleArray([
       { id: 'correct', textArab: endingWords },
       ...distractors.map((d, i) => ({

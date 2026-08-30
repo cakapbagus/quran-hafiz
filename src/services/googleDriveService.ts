@@ -11,6 +11,7 @@ const DRIVE_FILE_SCOPE = 'https://www.googleapis.com/auth/drive.file';
 const TOKEN_STORAGE_KEY = 'murottal_gdrive_access_token_v1';
 const USER_PROFILE_KEY = 'murottal_gdrive_user_profile_v1';
 const LAST_SYNC_KEY = 'murottal_gdrive_last_sync_v1';
+const MAX_BACKUP_BYTES = 5 * 1024 * 1024;
 
 // Default Client ID configured for this project.
 // Set VITE_GOOGLE_CLIENT_ID in your environment (.env.local for dev, or the
@@ -19,7 +20,7 @@ const DEFAULT_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || '';
 
 export function getStoredAccessToken(): string | null {
   try {
-    return sessionStorage.getItem(TOKEN_STORAGE_KEY) || localStorage.getItem(TOKEN_STORAGE_KEY);
+    return sessionStorage.getItem(TOKEN_STORAGE_KEY);
   } catch {
     return null;
   }
@@ -29,10 +30,8 @@ export function saveStoredAccessToken(token: string | null): void {
   try {
     if (token) {
       sessionStorage.setItem(TOKEN_STORAGE_KEY, token);
-      localStorage.setItem(TOKEN_STORAGE_KEY, token);
     } else {
       sessionStorage.removeItem(TOKEN_STORAGE_KEY);
-      localStorage.removeItem(TOKEN_STORAGE_KEY);
     }
   } catch (e) {
     console.warn('Failed to save access token:', e);
@@ -91,6 +90,10 @@ export async function requestGoogleAccessToken(customClientId?: string): Promise
     }
 
     const clientId = customClientId || DEFAULT_CLIENT_ID;
+    if (!clientId.trim()) {
+      reject(new Error('Google Client ID belum dikonfigurasikan. Isi VITE_GOOGLE_CLIENT_ID.'));
+      return;
+    }
 
     try {
       const client = window.google.accounts.oauth2.initTokenClient({
@@ -162,7 +165,7 @@ export async function findCloudBackupFile(
   token: string
 ): Promise<{ id: string; modifiedTime: string; size?: number; name: string } | null> {
   const query = encodeURIComponent(`name = '${DRIVE_FILE_NAME}' and trashed = false`);
-  const url = `https://www.googleapis.com/drive/v3/files?q=${query}&fields=files(id,name,modifiedTime,size)&spaces=drive`;
+  const url = `https://www.googleapis.com/drive/v3/files?q=${query}&fields=files(id,name,modifiedTime,size)&spaces=drive&orderBy=modifiedTime%20desc&pageSize=1`;
 
   const res = await fetch(url, {
     headers: {
@@ -273,13 +276,40 @@ export async function downloadCloudBackup(token: string, fileId: string): Promis
     throw new Error(errData?.error?.message || `Gagal mengunduh cadangan dari Google Drive (${res.status})`);
   }
 
-  const data: CloudBackupPayload = await res.json();
+  const declaredSize = Number(res.headers.get('content-length') || 0);
+  if (declaredSize > MAX_BACKUP_BYTES) throw new Error('Berkas cadangan melebihi batas 5 MB.');
+  const text = await res.text();
+  if (new Blob([text]).size > MAX_BACKUP_BYTES) throw new Error('Berkas cadangan melebihi batas 5 MB.');
+  let data: unknown;
+  try {
+    data = JSON.parse(text);
+  } catch {
+    throw new Error('Berkas cadangan bukan JSON yang valid.');
+  }
 
-  if (!data || !data.data) {
+  if (!isValidBackupPayload(data)) {
     throw new Error('Format berkas cadangan di Google Drive tidak valid.');
   }
 
   return data;
+}
+
+export function isValidBackupPayload(value: unknown): value is CloudBackupPayload {
+  if (!value || typeof value !== 'object') return false;
+  const backup = value as Partial<CloudBackupPayload>;
+  const data = backup.data;
+  if (backup.app !== 'Quran Hafiz' || !backup.version || !isIsoDate(backup.exportedAt) || !data || typeof data !== 'object') return false;
+  const settings = data.settings;
+  if (!settings || typeof settings !== 'object' || !Number.isFinite(settings.arabicFontSize) || settings.arabicFontSize < 20 || settings.arabicFontSize > 48 || !Number.isFinite(settings.latinFontSize) || settings.latinFontSize < 10 || settings.latinFontSize > 30 || !['light', 'dark', 'emerald_dark'].includes(settings.theme) || !['none', 'blur_all', 'first_letters', 'random_words'].includes(settings.maskModeDefault) || (settings.readDisplayMode !== undefined && !['verse', 'mushaf'].includes(settings.readDisplayMode)) || (settings.hafalanDisplayMode !== undefined && !['verse', 'mushaf'].includes(settings.hafalanDisplayMode)) || !Number.isInteger(settings.defaultRepeatCount) || settings.defaultRepeatCount < 1 || settings.defaultRepeatCount > 100) return false;
+  const validPosition = (item: { surahNumber?: unknown; verseNumber?: unknown }) => Number.isInteger(item.surahNumber) && Number(item.surahNumber) >= 1 && Number(item.surahNumber) <= 114 && Number.isInteger(item.verseNumber) && Number(item.verseNumber) >= 1 && Number(item.verseNumber) <= 286;
+  if (!Array.isArray(data.bookmarks) || data.bookmarks.length > 10000 || !data.bookmarks.every((item) => item && typeof item === 'object' && validPosition(item) && typeof item.id === 'string' && typeof item.surahName === 'string' && typeof item.verseArab === 'string' && typeof item.verseTranslation === 'string' && isIsoDate(item.createdAt))) return false;
+  if (!data.hafalanRecords || typeof data.hafalanRecords !== 'object' || Array.isArray(data.hafalanRecords) || Object.keys(data.hafalanRecords).length > 10000) return false;
+  if (!Object.entries(data.hafalanRecords).every(([key, item]) => item && key === item.surahNumber + '_' + item.verseNumber && validPosition(item) && ['not_started', 'in_progress', 'review_needed', 'memorized'].includes(item.status) && Number.isInteger(item.repeatCount) && item.repeatCount >= 0)) return false;
+  return data.lastRead === null || (!!data.lastRead && validPosition(data.lastRead) && typeof data.lastRead.surahName === 'string' && isIsoDate(data.lastRead.timestamp));
+}
+
+function isIsoDate(value: unknown): value is string {
+  return typeof value === 'string' && !Number.isNaN(Date.parse(value));
 }
 
 /**

@@ -4,7 +4,6 @@ const BOOKMARKS_KEY = 'murottal_quran_bookmarks_v1';
 const HAFALAN_RECORDS_KEY = 'murottal_quran_hafalan_records_v1';
 const LAST_READ_KEY = 'murottal_quran_last_read_v1';
 const SETTINGS_KEY = 'murottal_quran_settings_v1';
-const RECORDINGS_KEY = 'murottal_quran_recordings_v1';
 
 export const DEFAULT_SETTINGS: UserSettings = {
   arabicFontSize: 28,
@@ -16,7 +15,9 @@ export const DEFAULT_SETTINGS: UserSettings = {
   theme: 'dark',
   autoPlayNextVerse: true,
   defaultRepeatCount: 3,
-  maskModeDefault: 'none'
+  maskModeDefault: 'none',
+  readDisplayMode: 'verse',
+  hafalanDisplayMode: 'mushaf'
 };
 
 // --- Settings ---
@@ -41,7 +42,9 @@ export function saveStoredSettings(settings: UserSettings): void {
 export function getStoredBookmarks(): Bookmark[] {
   try {
     const data = localStorage.getItem(BOOKMARKS_KEY);
-    return data ? JSON.parse(data) : [];
+    if (!data) return [];
+    const parsed = JSON.parse(data);
+    return Array.isArray(parsed) ? parsed : [];
   } catch (e) {
     return [];
   }
@@ -94,7 +97,9 @@ export function isVerseBookmarked(surahNumber: number, verseNumber: number): boo
 export function getStoredHafalanRecords(): Record<string, HafalanVerseRecord> {
   try {
     const data = localStorage.getItem(HAFALAN_RECORDS_KEY);
-    return data ? JSON.parse(data) : {};
+    if (!data) return {};
+    const parsed = JSON.parse(data);
+    return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : {};
   } catch (e) {
     return {};
   }
@@ -148,54 +153,91 @@ export function saveLastRead(lastRead: LastRead): void {
     console.warn('Failed to save last read:', e);
   }
 }
-
-// --- Audio Recordings ---
-export function getStoredRecordings(): AudioRecording[] {
-  try {
-    const data = localStorage.getItem(RECORDINGS_KEY);
-    return data ? JSON.parse(data) : [];
-  } catch (e) {
-    return [];
-  }
-}
-
-export function saveAudioRecording(rec: Omit<AudioRecording, 'id' | 'recordedAt'>): AudioRecording {
-  const list = getStoredRecordings();
-  const newRec: AudioRecording = {
-    ...rec,
-    id: `rec_${Date.now()}`,
-    recordedAt: new Date().toISOString()
-  };
-  list.unshift(newRec);
-  try {
-    localStorage.setItem(RECORDINGS_KEY, JSON.stringify(list));
-  } catch (e) {
-    console.warn('Failed to save recording metadata:', e);
-  }
-  return newRec;
-}
-
 export function saveStoredBookmarks(bookmarks: Bookmark[]): void {
-  try {
-    localStorage.setItem(BOOKMARKS_KEY, JSON.stringify(bookmarks));
-  } catch (e) {
-    console.warn('Failed to save bookmarks list:', e);
-  }
+  localStorage.setItem(BOOKMARKS_KEY, JSON.stringify(bookmarks));
 }
 
 export function saveStoredHafalanRecords(records: Record<string, HafalanVerseRecord>): void {
+  localStorage.setItem(HAFALAN_RECORDS_KEY, JSON.stringify(records));
+}
+
+const RECORDINGS_DB = 'quran_hafiz_recordings_v1';
+
+function openRecordingsDb(): Promise<IDBDatabase> {
+  return new Promise((resolve, reject) => {
+    const request = indexedDB.open(RECORDINGS_DB, 1);
+    request.onupgradeneeded = () => request.result.createObjectStore('recordings', { keyPath: 'id' });
+    request.onsuccess = () => resolve(request.result);
+    request.onerror = () => reject(request.error);
+  });
+}
+
+export async function saveAudioRecording(rec: { surahNumber: number; verseNumber: number; blob: Blob; durationSeconds: number }): Promise<AudioRecording> {
+  const recording: AudioRecording = {
+    id: 'rec_' + Date.now(),
+    surahNumber: rec.surahNumber,
+    verseNumber: rec.verseNumber,
+    recordedAt: new Date().toISOString(),
+    durationSeconds: rec.durationSeconds
+  };
+  const db = await openRecordingsDb();
   try {
-    localStorage.setItem(HAFALAN_RECORDS_KEY, JSON.stringify(records));
-  } catch (e) {
-    console.warn('Failed to save hafalan records:', e);
+    await new Promise<void>((resolve, reject) => {
+      const tx = db.transaction('recordings', 'readwrite');
+      tx.objectStore('recordings').put({ ...recording, blob: rec.blob });
+      tx.oncomplete = () => resolve();
+      tx.onerror = () => reject(tx.error);
+    });
+  } finally {
+    db.close();
+  }
+  return recording;
+}
+
+export async function getStoredRecordings(): Promise<Array<AudioRecording & { blob: Blob }>> {
+  const db = await openRecordingsDb();
+  try {
+    return await new Promise((resolve, reject) => {
+      const request = db.transaction('recordings').objectStore('recordings').getAll();
+      request.onsuccess = () => resolve(request.result.sort((a, b) => b.recordedAt.localeCompare(a.recordedAt)));
+      request.onerror = () => reject(request.error);
+    });
+  } finally {
+    db.close();
   }
 }
 
-export function deleteAudioRecording(id: string): void {
-  const list = getStoredRecordings().filter((r) => r.id !== id);
+export async function deleteAudioRecording(id: string): Promise<void> {
+  const db = await openRecordingsDb();
   try {
-    localStorage.setItem(RECORDINGS_KEY, JSON.stringify(list));
-  } catch (e) {
-    console.warn('Failed to delete recording:', e);
+    await new Promise<void>((resolve, reject) => {
+      const tx = db.transaction('recordings', 'readwrite');
+      tx.objectStore('recordings').delete(id);
+      tx.oncomplete = () => resolve();
+      tx.onerror = () => reject(tx.error);
+    });
+  } finally {
+    db.close();
+  }
+}
+
+export function restoreStoredDataAtomically(
+  settings: UserSettings,
+  bookmarks: Bookmark[],
+  records: Record<string, HafalanVerseRecord>,
+  lastRead: LastRead | null
+): void {
+  const entries: Array<[string, string | null]> = [
+    [SETTINGS_KEY, JSON.stringify(settings)],
+    [BOOKMARKS_KEY, JSON.stringify(bookmarks)],
+    [HAFALAN_RECORDS_KEY, JSON.stringify(records)],
+    [LAST_READ_KEY, lastRead ? JSON.stringify(lastRead) : null]
+  ];
+  const previous = entries.map(([key]) => [key, localStorage.getItem(key)] as const);
+  try {
+    entries.forEach(([key, value]) => value === null ? localStorage.removeItem(key) : localStorage.setItem(key, value));
+  } catch (error) {
+    previous.forEach(([key, value]) => value === null ? localStorage.removeItem(key) : localStorage.setItem(key, value));
+    throw error;
   }
 }

@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { useDialogAccessibility } from '../hooks/useDialogAccessibility';
 import { Mic, Square, Play, Pause, Trash2, X, Check, Volume2 } from 'lucide-react';
 import { saveAudioRecording } from '../services/storageService';
 
@@ -19,15 +20,18 @@ export const VoiceRecorderModal: React.FC<VoiceRecorderModalProps> = ({
   qariAudioUrl,
   onClose
 }) => {
+  const dialogRef = useDialogAccessibility(onClose);
   const [isRecording, setIsRecording] = useState(false);
   const [recordingTime, setRecordingTime] = useState(0);
   const [recordedAudioUrl, setRecordedAudioUrl] = useState<string | null>(null);
   const [isPlayingRecorded, setIsPlayingRecorded] = useState(false);
   const [isPlayingQari, setIsPlayingQari] = useState(false);
+  const [recordingError, setRecordingError] = useState<string | null>(null);
 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
-  const timerRef = useRef<any>(null);
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const recordingTimeRef = useRef(0);
 
   const recordedAudioRef = useRef<HTMLAudioElement | null>(null);
   const qariAudioRef = useRef<HTMLAudioElement | null>(null);
@@ -35,12 +39,19 @@ export const VoiceRecorderModal: React.FC<VoiceRecorderModalProps> = ({
   useEffect(() => {
     return () => {
       if (timerRef.current) clearInterval(timerRef.current);
-      if (recordedAudioUrl) URL.revokeObjectURL(recordedAudioUrl);
+      mediaRecorderRef.current?.stream.getTracks().forEach((track) => track.stop());
+      recordedAudioRef.current?.pause();
+      qariAudioRef.current?.pause();
     };
   }, []);
 
+  useEffect(() => () => {
+    if (recordedAudioUrl) URL.revokeObjectURL(recordedAudioUrl);
+  }, [recordedAudioUrl]);
+
   const startRecording = async () => {
     try {
+      setRecordingError(null);
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       audioChunksRef.current = [];
       const mediaRecorder = new MediaRecorder(stream);
@@ -52,7 +63,7 @@ export const VoiceRecorderModal: React.FC<VoiceRecorderModalProps> = ({
       };
 
       mediaRecorder.onstop = () => {
-        const blob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+        const blob = new Blob(audioChunksRef.current, { type: mediaRecorder.mimeType || audioChunksRef.current[0]?.type || 'audio/webm' });
         const url = URL.createObjectURL(blob);
         setRecordedAudioUrl(url);
 
@@ -60,8 +71,11 @@ export const VoiceRecorderModal: React.FC<VoiceRecorderModalProps> = ({
         saveAudioRecording({
           surahNumber,
           verseNumber,
-          audioUrl: url,
-          durationSeconds: recordingTime
+          blob,
+          durationSeconds: recordingTimeRef.current
+        }).catch((error) => {
+          console.warn('Failed to persist recording:', error);
+          setRecordingError('Rekaman dapat diputar, tetapi gagal disimpan di perangkat.');
         });
       };
 
@@ -69,12 +83,16 @@ export const VoiceRecorderModal: React.FC<VoiceRecorderModalProps> = ({
       mediaRecorder.start();
       setIsRecording(true);
       setRecordingTime(0);
+      recordingTimeRef.current = 0;
 
       timerRef.current = setInterval(() => {
-        setRecordingTime((prev) => prev + 1);
+        setRecordingTime((prev) => {
+          recordingTimeRef.current = prev + 1;
+          return prev + 1;
+        });
       }, 1000);
     } catch (err) {
-      alert('Gagal mengaktifkan mikrofon. Mohon izinkan akses mikrofon browser.');
+      setRecordingError('Gagal mengaktifkan mikrofon. Izinkan akses mikrofon browser.');
     }
   };
 
@@ -95,8 +113,7 @@ export const VoiceRecorderModal: React.FC<VoiceRecorderModalProps> = ({
     } else {
       if (qariAudioRef.current) qariAudioRef.current.pause();
       setIsPlayingQari(false);
-      recordedAudioRef.current.play();
-      setIsPlayingRecorded(true);
+      recordedAudioRef.current.play().then(() => setIsPlayingRecorded(true)).catch(() => setIsPlayingRecorded(false));
     }
   };
 
@@ -108,20 +125,19 @@ export const VoiceRecorderModal: React.FC<VoiceRecorderModalProps> = ({
     } else {
       if (recordedAudioRef.current) recordedAudioRef.current.pause();
       setIsPlayingRecorded(false);
-      qariAudioRef.current.play();
-      setIsPlayingQari(true);
+      qariAudioRef.current.play().then(() => setIsPlayingQari(true)).catch(() => setIsPlayingQari(false));
     }
   };
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fade-in">
-      <div className="bg-[#15171E] rounded-3xl max-w-lg w-full p-6 space-y-6 shadow-2xl border border-[#1F2128]">
+      <div ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby="recorder-dialog-title" className="bg-[#15171E] rounded-3xl max-w-lg w-full p-6 space-y-6 shadow-2xl border border-[#1F2128]">
         <div className="flex items-center justify-between pb-3 border-b border-[#1F2128]">
-          <h2 className="text-base font-bold text-[#E2E2E2] flex items-center gap-2 font-serif-title">
+          <h2 id="recorder-dialog-title" className="text-base font-bold text-[#E2E2E2] flex items-center gap-2 font-serif-title">
             <Mic className="w-5 h-5 text-[#D4AF37]" />
             <span>Perekam Suara Hafalan</span>
           </h2>
-          <button onClick={onClose} className="p-1 rounded-xl text-[#8A8D9A] hover:text-[#E2E2E2]">
+          <button onClick={onClose} aria-label="Tutup dialog" className="p-1 rounded-xl text-[#8A8D9A] hover:text-[#E2E2E2]">
             <X className="w-5 h-5" />
           </button>
         </div>
@@ -149,6 +165,8 @@ export const VoiceRecorderModal: React.FC<VoiceRecorderModalProps> = ({
           src={qariAudioUrl}
           onEnded={() => setIsPlayingQari(false)}
         />
+
+        {recordingError && <p role="alert" className="text-xs text-red-400">{recordingError}</p>}
 
         {/* Recording Controls */}
         <div className="flex flex-col items-center justify-center space-y-4 py-2">

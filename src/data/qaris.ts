@@ -14,7 +14,6 @@ export const QARIS: Qari[] = [
     name: 'AbdulBaset AbdulSamad',
     arabicName: 'عبد الباسط عبد الصمد',
     style: 'Murattal',
-    apiKeyKey: '01',
     cdnUrlPattern: 'https://everyayah.com/data/Abdul_Basit_Murattal_192kbps/'
   },
   {
@@ -22,7 +21,6 @@ export const QARIS: Qari[] = [
     name: 'Maher Al-Muaiqly',
     arabicName: 'ماهر المعيقلي',
     style: 'Murattal',
-    apiKeyKey: '02',
     cdnUrlPattern: 'https://everyayah.com/data/MaherAlMuaiqly128kbps/'
   },
   {
@@ -30,7 +28,6 @@ export const QARIS: Qari[] = [
     name: 'Mohamed Siddiq Al-Minshawi',
     arabicName: 'محمد صديق المنشاوي',
     style: 'Murattal',
-    apiKeyKey: '03',
     cdnUrlPattern: 'https://everyayah.com/data/Minshawy_Murattal_128kbps/'
   },
   {
@@ -38,7 +35,6 @@ export const QARIS: Qari[] = [
     name: 'Mahmoud Khalil Al-Husary',
     arabicName: 'محمود خليل الحصري',
     style: 'Murattal (Pendidik Hafalan)',
-    apiKeyKey: '04',
     cdnUrlPattern: 'https://everyayah.com/data/Husary_128kbps/'
   },
   {
@@ -46,7 +42,6 @@ export const QARIS: Qari[] = [
     name: 'Saad Al-Ghamdi',
     arabicName: 'سعد الغامدي',
     style: 'Murattal',
-    apiKeyKey: '05',
     cdnUrlPattern: 'https://everyayah.com/data/Ghamadi_40kbps/'
   }
 ];

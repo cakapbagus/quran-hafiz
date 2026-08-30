@@ -38,7 +38,7 @@ export interface Qari {
   name: string;
   arabicName: string;
   style: string;
-  apiKeyKey: string; // key in audio object e.g., '05'
+  apiKeyKey?: string; // key in audio object e.g., '05'; unused reciters fall back to cdnUrlPattern
   cdnUrlPattern?: string; // e.g., https://everyayah.com/data/Alafasy_128kbps/
 }
 
@@ -86,6 +86,8 @@ export interface AudioPlaybackState {
   autoScrollEnabled: boolean;
 }
 
+export type QuranDisplayMode = 'verse' | 'mushaf';
+
 export interface UserSettings {
   arabicFontSize: number; // in px e.g. 28
   latinFontSize: number;
@@ -97,6 +99,8 @@ export interface UserSettings {
   autoPlayNextVerse: boolean;
   defaultRepeatCount: number;
   maskModeDefault: 'none' | 'blur_all' | 'first_letters' | 'random_words';
+  readDisplayMode: QuranDisplayMode;
+  hafalanDisplayMode: QuranDisplayMode;
   customApiKey?: string; // Stored user Gemini API key credential for personal quota
   autoCloudSync?: boolean; // Automatically sync with Google Drive
 }
@@ -137,7 +141,7 @@ export interface AudioRecording {
   id: string;
   surahNumber: number;
   verseNumber: number;
-  audioUrl: string;
+  audioUrl?: string;
   recordedAt: string;
   durationSeconds: number;
 }
@@ -149,6 +153,8 @@ export type ExamQuestionType =
   | 'guess_surah' // Tebak nama surah dari potongan ayat / audio
   | 'word_scramble' // Susun urutan potongan kata ayat
   | 'fawasil_ending'; // Tebak kata penutup akhir ayat (Mutasyabihat)
+
+export type ExamDifficulty = 'easy' | 'medium' | 'hard';
 
 export interface WordScrambleItem {
   id: string;
@@ -191,6 +197,7 @@ export interface ExamConfig {
   customStartVerse?: number;
   customEndVerse?: number;
   questionCount: number; // 5, 10, 15, 20, 25, 30
+  difficulty: ExamDifficulty;
   allowedTypes: ExamQuestionType[];
   timerSecondsPerQuestion: number; // 0 for unlimited, 20, 30, 45
   includeAudioPrompts: boolean;

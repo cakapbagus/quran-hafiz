@@ -41,6 +41,7 @@ export interface TajwidRuleInfo {
   shortDesc: string;
   caraBaca: string;
   contohLafaz: string;
+  contohSorotan: string[];
   huruf: string[];
 }
 
@@ -57,6 +58,7 @@ export const TAJWID_RULES: TajwidRuleInfo[] = [
     shortDesc: 'Dengung sempurna ketika huruf Nun (نّ) atau Mim (مّ) bertasydid.',
     caraBaca: 'Didengungkan dengan menahan suara di pangkal hidung selama 2 harakat (ketukan).',
     contohLafaz: 'إِنَّ اللَّهَ ، ثُمَّ كَلَّا',
+    contohSorotan: ['نَّ', 'مَّ'],
     huruf: ['نّ', 'مّ']
   },
   // 2. Iqlab
@@ -71,6 +73,7 @@ export const TAJWID_RULES: TajwidRuleInfo[] = [
     shortDesc: 'Nun sukun atau tanwin bertemu huruf Ba (ب). Disertai tanda mim kecil (ۘ / ۢ).',
     caraBaca: 'Mengubah bunyi suara nun sukun/tanwin menjadi bunyi mim disertai dengung (ghunnah 2 harakat).',
     contohLafaz: 'مِنْ بَعْدِ ، عَلِيمٌ بِذَاتِ',
+    contohSorotan: ['نْ ب', 'ٌ ب'],
     huruf: ['ب']
   },
   // 3. Idgham Bighunnah
@@ -85,6 +88,7 @@ export const TAJWID_RULES: TajwidRuleInfo[] = [
     shortDesc: 'Nun sukun atau tanwin bertemu salah satu huruf: Ya (ي), Nun (ن), Mim (م), Waw (و).',
     caraBaca: 'Memasukkan bunyi nun sukun/tanwin ke huruf berikutnya disertai dengung 2 harakat.',
     contohLafaz: 'مَنْ يَقُولُ ، مِّن مَّالٍ',
+    contohSorotan: ['نْ ي', 'ن مَّ'],
     huruf: ['ي', 'ن', 'م', 'و']
   },
   // 4. Idgham Bilaghunnah
@@ -99,6 +103,7 @@ export const TAJWID_RULES: TajwidRuleInfo[] = [
     shortDesc: 'Nun sukun atau tanwin bertemu huruf Lam (ل) atau Ra (ر).',
     caraBaca: 'Memasukkan bunyi nun sukun/tanwin ke huruf lam/ra secara lebur utuh tanpa dengung.',
     contohLafaz: 'مِنْ رَبِّهِمْ ، غَفُورٌ رَحِيمٌ',
+    contohSorotan: ['نْ ر', 'ٌ ر'],
     huruf: ['ل', 'ر']
   },
   // 5. Ikhfa Haqiqi
@@ -113,6 +118,7 @@ export const TAJWID_RULES: TajwidRuleInfo[] = [
     shortDesc: 'Nun sukun atau tanwin bertemu 15 huruf ikhfa.',
     caraBaca: 'Menyamarkan bunyi nun sukun/tanwin antara izhar dan idgham disertai dengung 2 harakat menuju makhraj huruf berikutnya.',
     contohLafaz: 'مِنْ كُلِّ ، أَنْزَلْنَا ، كِتَابٌ كَرِيمٌ',
+    contohSorotan: ['نْ ك', 'نْز', 'ٌ ك'],
     huruf: ['ت', 'ث', 'ج', 'د', 'ذ', 'ز', 'س', 'ش', 'ص', 'ض', 'ط', 'ظ', 'ف', 'ق', 'ك']
   },
   // 6. Izhar Halqi
@@ -127,6 +133,7 @@ export const TAJWID_RULES: TajwidRuleInfo[] = [
     shortDesc: 'Nun sukun atau tanwin bertemu 6 huruf tenggorokan (Halq).',
     caraBaca: 'Membaca nun sukun/tanwin secara jelas, tegas, tanpa dengung yang berlebih.',
     contohLafaz: 'مَنْ آمَنَ ، مِنْ حَكِيمٍ ، أَنْعَمْتَ',
+    contohSorotan: ['نْ آ', 'نْ ح', 'نْع'],
     huruf: ['ء', 'هـ', 'ع', 'ح', 'غ', 'خ']
   },
   // 7. Qalqalah (Kubra & Sughra)
@@ -141,6 +148,7 @@ export const TAJWID_RULES: TajwidRuleInfo[] = [
     shortDesc: 'Memantulkan huruf qalqalah yang berharakat sukun (asli atau waqaf): Qaf, Tho, Ba, Jim, Dal (ق، ط، ب، ج، د).',
     caraBaca: 'Membaca dengan pantulan suara yang jelas. Sughra di tengah kata pantulannya ringan, Kubra di akhir kata/waqaf pantulannya kuat.',
     contohLafaz: 'يَجْعَلُونَ ، الْفَلَقِ ، كَسَبَ ، أَحَدٌ',
+    contohSorotan: ['جْ', 'قِ', 'بَ', 'دٌ'],
     huruf: ['ق', 'ط', 'ب', 'ج', 'د']
   },
   // 8. Ikhfa Syafawi
@@ -155,6 +163,7 @@ export const TAJWID_RULES: TajwidRuleInfo[] = [
     shortDesc: 'Mim sukun (مْ) bertemu huruf Ba (ب).',
     caraBaca: 'Menyamarkan bunyi mim pada bibir disertai dengung 2 harakat.',
     contohLafaz: 'تَرْمِيهِمْ بِحِجَارَةٍ ، هُمْ بِهِ',
+    contohSorotan: ['مْ ب'],
     huruf: ['ب (setelah Mim Sukun)']
   },
   // 9. Idgham Mimi / Mutamatsilain
@@ -169,6 +178,7 @@ export const TAJWID_RULES: TajwidRuleInfo[] = [
     shortDesc: 'Mim sukun (مْ) bertemu huruf Mim (م).',
     caraBaca: 'Memasukkan mim pertama ke mim kedua dengan tasydid dan dengung 2 harakat.',
     contohLafaz: 'لَهُمْ مَّا يَشَاءُونَ ، كُنتُم مُّؤْمِنِينَ',
+    contohSorotan: ['مْ مَّ', 'م مُّ'],
     huruf: ['م (setelah Mim Sukun)']
   },
   // 10. Izhar Syafawi
@@ -183,6 +193,7 @@ export const TAJWID_RULES: TajwidRuleInfo[] = [
     shortDesc: 'Mim sukun (مْ) bertemu seluruh huruf hijaiyah kecuali Mim dan Ba.',
     caraBaca: 'Membaca mim sukun secara jelas di bibir tanpa dengung, terutama saat bertemu Waw (و) atau Fa (ف).',
     contohLafaz: 'أَلَمْ تَرَ ، لَعَلَّكُمْ تَتَّقُونَ',
+    contohSorotan: ['مْ ت'],
     huruf: ['Semua huruf kecuali Mim dan Ba']
   },
   // 11. Mad Wajib Muttashil
@@ -197,6 +208,7 @@ export const TAJWID_RULES: TajwidRuleInfo[] = [
     shortDesc: 'Mad thabi\'i bertemu huruf Hamzah (ء) dalam satu kata bersambung (tanda bendera ~).',
     caraBaca: 'Dibaca panjang 4 sampai 5 harakat (atau 6 harakat saat waqaf). Wajib dipanjangkan.',
     contohLafaz: 'جَآءَ ، السَّمَآءِ ، سُوۤءَ',
+    contohSorotan: ['آءَ', 'آءِ', 'وۤءَ'],
     huruf: ['~ (Mad bertemu Hamzah 1 kata)']
   },
   // 12. Mad Jaiz Munfashil
@@ -211,6 +223,7 @@ export const TAJWID_RULES: TajwidRuleInfo[] = [
     shortDesc: 'Mad thabi\'i di akhir kata bertemu huruf Hamzah di awal kata berikutnya (terpisah).',
     caraBaca: 'Boleh dibaca panjang 2, 4, atau 5 harakat (menurut jalur Syathibiyyah diutamakan 4-5 harakat).',
     contohLafaz: 'إِنَّآ أَعْطَيْنَاكَ ، يَا أَيُّهَا',
+    contohSorotan: ['آ أ', 'ا أ'],
     huruf: ['~ (Mad bertemu Hamzah beda kata)']
   },
   // 13. Mad Lazim
@@ -225,6 +238,7 @@ export const TAJWID_RULES: TajwidRuleInfo[] = [
     shortDesc: 'Mad thabi\'i bertemu huruf bertasydid atau sukun lazim asli (seperti Alif Lam Mim, Adh-Dhaallin).',
     caraBaca: 'Pasti/lazim dipanjangkan 6 harakat (3 alif) tanpa boleh dikurangi.',
     contohLafaz: 'الضَّآلِّينَ ، الۤمّۤ ، حٰمۤ',
+    contohSorotan: ['آلِّ', 'الۤمّۤ', 'حٰمۤ'],
     huruf: ['Mad + Tasydid / Huruf Muqaththa\'ah']
   },
   // 14. Mad 'Aridh Lissukun
@@ -239,6 +253,7 @@ export const TAJWID_RULES: TajwidRuleInfo[] = [
     shortDesc: 'Mad thabi\'i yang bertemu huruf hidup di akhir ayat atau sebelum waqaf yang disukunkan.',
     caraBaca: 'Boleh dibaca 2, 4, atau 6 harakat (3 pilihan panjang bacaan).',
     contohLafaz: 'الْعَالَمِينَ ۝ ، الرَّحِيمِ ۝ ، تَعْلَمُونَ ۝',
+    contohSorotan: ['مِينَ ۝', 'حِيمِ ۝', 'مُونَ ۝'],
     huruf: ['Mad di akhir waqaf']
   },
   // 15. Waqaf Lazim (مـ)
@@ -253,6 +268,7 @@ export const TAJWID_RULES: TajwidRuleInfo[] = [
     shortDesc: 'Tanda Waqaf Lazim (مـ) mewajibkan berhenti untuk menjaga kesempurnaan makna ayat agar tidak rancu dengan kalimat setelahnya.',
     caraBaca: 'Wajib berhenti mengambil napas, kemudian melanjutkan bacaan dari kalimat berikutnya.',
     contohLafaz: 'إِنَّمَا يَسْتَجِيبُ الَّذِينَ يَسْمَعُونَ ۘ وَالْمَوْتَىٰ يَبْعَثُهُمُ اللَّهُ',
+    contohSorotan: ['ۘ'],
     huruf: ['مـ (Tanda Waqaf Lazim)']
   },
   // 16. Waqaf Jaiz (ج)
@@ -267,6 +283,7 @@ export const TAJWID_RULES: TajwidRuleInfo[] = [
     shortDesc: 'Tanda Waqaf Jaiz (ج) membolehkan pembaca untuk berhenti atau meneruskan bacaan (keduanya sama-sama baik).',
     caraBaca: 'Boleh berhenti mengambil napas atau boleh disambung terus tanpa berhenti.',
     contohLafaz: 'نَحْنُ نَقُصُّ عَلَيْكَ نَبَأَهُم بِالْحَقِّ ۚ إِنَّهُمْ فِتْيَةٌ',
+    contohSorotan: ['ۚ'],
     huruf: ['ج (Tanda Waqaf Jaiz)']
   },
   // 17. Al-Waqfu Aula (قلى)
@@ -281,6 +298,7 @@ export const TAJWID_RULES: TajwidRuleInfo[] = [
     shortDesc: 'Tanda Al-Waqfu Aula (قلى) menunjukkan bahwa berhenti (waqaf) lebih utama dan lebih utama daripada meneruskan bacaan.',
     caraBaca: 'Diutamakan berhenti mengambil napas, meskipun washal (terus) tetap diperbolehkan.',
     contohLafaz: 'قُل رَّبِّي أَعْلَمُ بِعِدَّتِهِم مَّا يَعْلَمُهُمْ إِلَّا قَلِيلٌ ۗ',
+    contohSorotan: ['ۗ'],
     huruf: ['قلى (Al-Waqfu Aula)']
   },
   // 18. Al-Washlu Aula (صلى)
@@ -295,6 +313,7 @@ export const TAJWID_RULES: TajwidRuleInfo[] = [
     shortDesc: 'Tanda Al-Washlu Aula (صلى) menunjukkan bahwa meneruskan bacaan (washal) lebih utama daripada berhenti.',
     caraBaca: 'Diutamakan menyambung bacaan ke kalimat selanjutnya tanpa berhenti selama napas mencukupi.',
     contohLafaz: 'وَإِن يَمْسَسْكَ اللَّهُ بِضُرٍّ فَلَا كَاشِفَ لَهُ إِلَّا هُوَ ۖ',
+    contohSorotan: ['ۖ'],
     huruf: ['صلى (Al-Washlu Aula)']
   },
   // 19. Waqaf Mamnu' / Laa Waqfa Fih (لا)
@@ -309,6 +328,7 @@ export const TAJWID_RULES: TajwidRuleInfo[] = [
     shortDesc: 'Tanda tidak boleh berhenti (لا) di tengah kalimat yang maknanya belum tuntas dan saling berkaitan erat.',
     caraBaca: 'Dilarang berhenti di sini; jika terpaksa berhenti karena kehabisan napas, wajib mengulang dari kata sebelumnya.',
     contohLafaz: 'الَّذِينَ تَتَوَفَّاهُمُ الْمَلَائِكَةُ طَيِّبِينَ ۙ يَقُولُونَ سَلَامٌ عَلَيْكُمُ',
+    contohSorotan: ['ۙ'],
     huruf: ['لا (Waqaf Mamnu\')']
   },
   // 20. Waqaf Mu'anaqah / Muraqabah (ۛ ... ۛ)
@@ -323,6 +343,7 @@ export const TAJWID_RULES: TajwidRuleInfo[] = [
     shortDesc: 'Tanda titik tiga berpasangan (ۛ). Pembaca hanya boleh berhenti di salah satu tanda titik tiga, tidak boleh berhenti di keduanya.',
     caraBaca: 'Jika berhenti pada tanda pertama maka terus pada tanda kedua, atau sebaliknya.',
     contohLafaz: 'ذَٰلِكَ الْكِتَابُ لَا رَيْبَ ۛ فِيهِ ۛ هُدًى لِّلْمُتَّقِينَ',
+    contohSorotan: ['ۛ'],
     huruf: ['ۛ ... ۛ (Titik Tiga Berpasangan)']
   },
   // 21. Saktah (س / سكتة)
@@ -337,6 +358,7 @@ export const TAJWID_RULES: TajwidRuleInfo[] = [
     shortDesc: 'Berhenti sejenak tanpa bernapas selama kira-kira 2 harakat (1 alif), kemudian melanjutkan bacaan.',
     caraBaca: 'Hentikan suara sejenak tanpa menarik napas baru, lalu lanjutkan kalimat berikutnya dengan fasih.',
     contohLafaz: 'عِوَجًا ۜ قَيِّمًا ، مَرْقَدِنَا ۜ هَذَا ، كَلَّا بَلْ ۜ رَانَ',
+    contohSorotan: ['ۜ'],
     huruf: ['س / ۜ (Saktah 4 Tempat dalam Al-Qur\'an)']
   },
   // 22. Ibtida' Taam (Taraf Sempurna)
@@ -351,6 +373,7 @@ export const TAJWID_RULES: TajwidRuleInfo[] = [
     shortDesc: 'Memulai bacaan dari lafaz yang maknanya sudah sempurna, tidak memiliki keterkaitan lafaz maupun makna dengan kalimat sebelumnya.',
     caraBaca: 'Sangat dianjurkan; contohnya memulai dari awal surah atau awal tema/kisah baru.',
     contohLafaz: 'الْحَمْدُ لِلَّهِ رَبِّ الْعَالَمِينَ ، يَا أَيُّهَا الَّذِينَ آمَنُوا',
+    contohSorotan: ['الْحَمْدُ', 'يَا أَيُّهَا'],
     huruf: ['Awal Surah / Awal Kisah Mandiri']
   },
   // 23. Ibtida' Kaafi (Taraf Cukup)
@@ -365,6 +388,7 @@ export const TAJWID_RULES: TajwidRuleInfo[] = [
     shortDesc: 'Memulai bacaan dari kalimat yang maknanya mandiri dan dapat dipahami, meskipun pembahasannya masih berkaitan dengan ayat sebelumnya.',
     caraBaca: 'Boleh dan baik dilakukan setelah waqaf kafi.',
     contohLafaz: 'خَتَمَ اللَّهُ عَلَىٰ قُلُوبِهِمْ (setelah ayat إِنَّ الَّذِينَ كَفَرُوا سَوَاءٌ عَلَيْهِمْ)',
+    contohSorotan: ['خَتَمَ'],
     huruf: ['Awal Ayat Mandiri Topik Terkait']
   },
   // 24. Ibtida' Hasan (Taraf Baik)
@@ -379,6 +403,7 @@ export const TAJWID_RULES: TajwidRuleInfo[] = [
     shortDesc: 'Memulai bacaan pada lafaz yang maknanya baik dan benar, tetapi secara susunan nahwu/lafaz masih terikat dengan sebelumnya.',
     caraBaca: 'Boleh dilakukan jika berada di awal kepala ayat (ra\'sul ayah).',
     contohLafaz: 'الرَّحْمَٰنِ الرَّحِيمِ (karena merupakan kepala ayat ke-3 Surah Al-Fatihah)',
+    contohSorotan: ['الرَّحْمَٰنِ'],
     huruf: ['Kepala Ayat (Ra\'sul Ayah)']
   },
   // 25. Ibtida' Qabih (Taraf Buruk / Dilarang)
@@ -393,6 +418,7 @@ export const TAJWID_RULES: TajwidRuleInfo[] = [
     shortDesc: 'Memulai bacaan pada potongan kalimat yang merusak makna atau menimbulkan pengertian yang keliru/kufur.',
     caraBaca: 'Haram/dilarang disengaja; wajib mengulang dari kata yang tepat sebelumnya.',
     contohLafaz: 'إِنَّ اللَّهَ فَقِيرٌ (memotong tanpa membaca لَّقَدْ سَمِعَ اللَّهُ قَوْلَ الَّذِينَ قَالُوا)',
+    contohSorotan: ['إِنَّ اللَّهَ فَقِيرٌ'],
     huruf: ['Potongan Kalimat Merusak Makna']
   },
   // 26. Kaidah Hamzah Washal pada Ibtida'
@@ -407,6 +433,7 @@ export const TAJWID_RULES: TajwidRuleInfo[] = [
     shortDesc: 'Kaidah penentuan harakat awal (fathah, kasrah, atau dhammah) ketika memulai bacaan dari kata yang diawali Hamzah Washal (ٱ).',
     caraBaca: 'Pada isim ber-Alif Lam dibaca fathah (الْـ -> Al-). Pada fi\'il, lihat huruf ke-3: jika dhammah asli dibaca U (misal: اُدْعُ), jika fathah/kasrah dibaca I (misal: اِقْرَأْ ، اِضْرِبْ).',
     contohLafaz: 'اِقْرَأْ بِاسْمِ رَبِّكَ ، اُدْعُ إِلَىٰ سَبِيلِ رَبِّكَ ، الْحَمْدُ',
+    contohSorotan: ['اِقْرَأْ', 'اُدْعُ', 'الْحَمْدُ'],
     huruf: ['ٱ (Hamzah Washal pada Isim & Fi\'il)']
   }
 ];
@@ -460,99 +487,210 @@ export interface TajwidToken {
   label?: string;
 }
 
+const ARABIC_LETTER_PATTERN = /[ء-غف-يٮٯٱ-ۓﭐ-﷿]/u;
+const TANWIN_PATTERN = /[ًࣰٌࣱٍࣲ]/u;
+const SUKUN_PATTERN = /[ْۡ]/u;
+const SHADDA_PATTERN = /ّ/u;
+const BASIC_HARAKAH_PATTERN = /[ًࣰٌࣱٍࣲَُِّْۡ]/u;
+const SHORT_VOWEL_PATTERN = /[ًࣰٌࣱٍࣲَُِ]/u;
+const FATHAH_PATTERN = /َ/u;
+const DAMMAH_PATTERN = /ُ/u;
+const KASRAH_PATTERN = /ِ/u;
+const MADD_PATTERN = /[ٓۤ]/u;
+const SUPERSCRIPT_ALIF_PATTERN = /ٰ/u;
+const IQLAB_MARK_PATTERN = /[ۘۢ]/u;
+
+interface ArabicGrapheme {
+  text: string;
+  base?: string;
+}
+
+const getArabicGraphemes = (text: string): ArabicGrapheme[] => {
+  const segmenter = new Intl.Segmenter('ar', { granularity: 'grapheme' });
+
+  return Array.from(segmenter.segment(text), ({ segment }) => ({
+    text: segment,
+    base: segment.match(ARABIC_LETTER_PATTERN)?.[0]
+  }));
+};
+
+const hasWhitespaceBetween = (graphemes: ArabicGrapheme[], start: number, end: number) =>
+  graphemes.slice(start + 1, end).some(({ text }) => /\s/u.test(text));
+
+const getNextArabicLetterIndex = (graphemes: ArabicGrapheme[], start: number) => {
+  for (let index = start + 1; index < graphemes.length; index += 1) {
+    if (graphemes[index].base) return index;
+  }
+
+  return -1;
+};
+
+const getPreviousArabicLetterIndex = (graphemes: ArabicGrapheme[], start: number) => {
+  for (let index = start - 1; index >= 0; index -= 1) {
+    if (graphemes[index].base) return index;
+  }
+
+  return -1;
+};
+
+const isLafzulJalalahGrapheme = (graphemes: ArabicGrapheme[], index: number) => {
+  let start = index;
+  let end = index;
+
+  while (start > 0 && graphemes[start - 1].base) start -= 1;
+  while (end < graphemes.length - 1 && graphemes[end + 1].base) end += 1;
+
+  const word = graphemes
+    .slice(start, end + 1)
+    .map(({ base }) => base || '')
+    .join('')
+    .replace(/ٱ/g, 'ا');
+
+  return word.endsWith('الله') || word.endsWith('لله');
+};
+
+const isMadLetter = (graphemes: ArabicGrapheme[], index: number) => {
+  const grapheme = graphemes[index];
+  if (!grapheme.base) return false;
+  if (grapheme.base === 'آ' || MADD_PATTERN.test(grapheme.text) || SUPERSCRIPT_ALIF_PATTERN.test(grapheme.text)) {
+    return true;
+  }
+
+  const previousIndex = getPreviousArabicLetterIndex(graphemes, index);
+  if (previousIndex === -1 || hasWhitespaceBetween(graphemes, previousIndex, index)) return false;
+
+  const previousText = graphemes[previousIndex].text;
+  const hasShortVowel = SHORT_VOWEL_PATTERN.test(grapheme.text);
+
+  if (grapheme.base === 'ا') return FATHAH_PATTERN.test(previousText) && !hasShortVowel;
+  if (grapheme.base === 'و') return DAMMAH_PATTERN.test(previousText) && !hasShortVowel;
+  if ('يى'.includes(grapheme.base)) return KASRAH_PATTERN.test(previousText) && !hasShortVowel;
+
+  return false;
+};
+
 export function parseArabicTajwid(arabicText: string): TajwidToken[] {
   if (!arabicText) return [];
 
-  // Characters definition
-  // Sukun: \u0652 (Arabic Sukun), \u06E1 (Arabic Small High Dotless Head of Khah - Uthmani Sukun)
-  // Shaddah: \u0651
-  // Fathatan: \u064B, Dammatan: \u064C, Kasratan: \u064D
-  // Maddah: \u0653, Superscript Alif: \u0670
-  // Small High Meem (Iqlab marker): \u06E2, \u06D8
+  const graphemes = getArabicGraphemes(arabicText);
+  const rules: Array<TajwidRuleKey | undefined> = Array(graphemes.length).fill(undefined);
+  const protectedLafzulJalalah = graphemes.map((_, index) => isLafzulJalalahGrapheme(graphemes, index));
+  const assignRule = (index: number, rule: TajwidRuleKey) => {
+    if (index >= 0 && !protectedLafzulJalalah[index]) rules[index] = rule;
+  };
 
-  // We can segment words or sub-tokens using Regex with lookaheads
-  const tokens: TajwidToken[] = [];
-  
-  // Split verse into words while keeping spaces
-  const words = arabicText.split(/(\s+)/);
+  graphemes.forEach((grapheme, index) => {
+    if (!grapheme.base) return;
 
-  words.forEach((word) => {
-    if (!word || /^\s+$/.test(word)) {
-      tokens.push({ text: word });
+    const nextIndex = getNextArabicLetterIndex(graphemes, index);
+    if (nextIndex === -1) return;
+
+    const nextLetter = graphemes[nextIndex].base;
+    const crossesWordBoundary = hasWhitespaceBetween(graphemes, index, nextIndex);
+    const hasTanwin = TANWIN_PATTERN.test(grapheme.text);
+    const isExplicitNunSakinah = grapheme.base === 'ن' && SUKUN_PATTERN.test(grapheme.text);
+    const isBareNunAtWordEnd =
+      grapheme.base === 'ن' && crossesWordBoundary && !BASIC_HARAKAH_PATTERN.test(grapheme.text);
+    const isNunSakinahOrTanwin = hasTanwin || isExplicitNunSakinah || isBareNunAtWordEnd;
+
+    if (isNunSakinahOrTanwin && nextLetter) {
+      let rule: TajwidRuleKey | undefined;
+
+      if (nextLetter === 'ب' || IQLAB_MARK_PATTERN.test(grapheme.text)) {
+        rule = 'iqlab';
+      } else if (crossesWordBoundary && 'ينمو'.includes(nextLetter)) {
+        rule = 'idgham_bighunnah';
+      } else if (crossesWordBoundary && 'لر'.includes(nextLetter)) {
+        rule = 'idgham_bilaghunnah';
+      } else if ('تثجدذزسشصضطظفقك'.includes(nextLetter)) {
+        rule = 'ikhfa_haqiqi';
+      } else if ('ءهعحغخ'.includes(nextLetter)) {
+        rule = 'izhar_halqi';
+      }
+
+      if (rule) {
+        assignRule(index, rule);
+        assignRule(nextIndex, rule);
+      }
+    }
+
+    if (grapheme.base === 'م' && SUKUN_PATTERN.test(grapheme.text) && nextLetter) {
+      const rule = nextLetter === 'ب'
+        ? 'ikhfa_syafawi'
+        : nextLetter === 'م'
+          ? 'idgham_mimi'
+          : undefined;
+
+      if (rule) {
+        assignRule(index, rule);
+        assignRule(nextIndex, rule);
+      }
+    }
+  });
+
+  graphemes.forEach((grapheme, index) => {
+    if (!grapheme.base) return;
+
+    if (isMadLetter(graphemes, index)) {
+      const nextIndex = getNextArabicLetterIndex(graphemes, index);
+      const nextGrapheme = nextIndex >= 0 ? graphemes[nextIndex] : undefined;
+      const crossesWordBoundary = nextIndex >= 0 && hasWhitespaceBetween(graphemes, index, nextIndex);
+      const nextIsHamzah = nextGrapheme?.base ? 'ءأإؤئ'.includes(nextGrapheme.base) : false;
+      const nextIsLastArabicLetter = nextIndex >= 0 && getNextArabicLetterIndex(graphemes, nextIndex) === -1;
+
+      if (grapheme.text.includes('ۤ')) {
+        assignRule(index, 'mad_lazim');
+      } else if (nextGrapheme && !crossesWordBoundary && nextIsHamzah) {
+        assignRule(index, 'mad_wajib');
+        assignRule(nextIndex, 'mad_wajib');
+      } else if (nextGrapheme && !crossesWordBoundary && (SHADDA_PATTERN.test(nextGrapheme.text) || SUKUN_PATTERN.test(nextGrapheme.text))) {
+        assignRule(index, 'mad_lazim');
+        assignRule(nextIndex, 'mad_lazim');
+      } else if (
+        nextGrapheme &&
+        !crossesWordBoundary &&
+        nextIsLastArabicLetter &&
+        SHORT_VOWEL_PATTERN.test(nextGrapheme.text) &&
+        !isMadLetter(graphemes, nextIndex)
+      ) {
+        assignRule(index, 'mad_arid');
+        assignRule(nextIndex, 'mad_arid');
+      } else {
+        assignRule(index, 'mad_thobii');
+      }
       return;
     }
 
-    // Process a single Arabic word to colorize specific tajwid letter combinations
-    // Patterns list from most specific to general:
-    
-    // Pattern 1: Mad Wajib / Mad Jaiz / Mad Lazim (Contains Maddah wave ~ \u0653 or \u06E1 / \u0670 + maddah)
-    // Pattern 2: Ghunnah Musyaddadah: (نّ / مّ)
-    // Pattern 3: Iqlab: contains tanwin / nun sukun followed by Ba or small meem \u06E2
-    // Pattern 4: Qalqalah: (ق|ط|ب|ج|د) followed by sukun (\u0652 or \u06E1) or at end of word
-    // Pattern 5: Idgham / Ikhfa sequences
+    if (rules[index]) return;
 
-    let remaining = word;
-    let wordTokens: TajwidToken[] = [];
-
-    // Helper regex to match Tajwid components inside a word:
-    // 1. Maddah: letter + \u0653 or \u0670\u0653
-    // 2. Ghunnah: (ن|م)[\u064B-\u0650]?\u0651
-    // 3. Iqlab: [ۢۘ] or (ن[\u0652\u06E1]?|[\u064B\u064C\u064D])ب
-    // 4. Qalqalah: [قطبجد][\u0652\u06E1]
-
-    const combinedRegex = /([^\s\u0653]*?[\u0653][^\s\u0653]*?)|([نNM][\u064B-\u0650]?\u0651[^\s]*?|[مM][\u064B-\u0650]?\u0651[^\s]*?)|([ۢۘ]|ن[\u0652\u06E1]?ب|[\u064B\u064C\u064D]ب)|([قطبجد][\u0652\u06E1])/g;
-
-    let lastIndex = 0;
-    let match: RegExpExecArray | null;
-
-    while ((match = combinedRegex.exec(word)) !== null) {
-      const matchStart = match.index;
-      const matchEnd = combinedRegex.lastIndex;
-
-      // Add leading plain text if any
-      if (matchStart > lastIndex) {
-        wordTokens.push({ text: word.substring(lastIndex, matchStart) });
-      }
-
-      const matchedText = match[0];
-      let rule: TajwidRuleKey = 'ghunnah';
-
-      if (match[1]) {
-        // Maddah present
-        if (matchedText.includes('الضَّ') || matchedText.includes('ۤ') || matchedText.length > 8) {
-          rule = 'mad_lazim';
-        } else if (matchedText.includes('ء') || matchedText.includes('ئ') || matchedText.includes('ؤ')) {
-          rule = 'mad_wajib';
-        } else {
-          rule = 'mad_jaiz';
-        }
-      } else if (match[2]) {
-        // Ghunnah Musyaddadah
-        rule = 'ghunnah';
-      } else if (match[3]) {
-        // Iqlab
-        rule = 'iqlab';
-      } else if (match[4]) {
-        // Qalqalah
-        rule = 'qalqalah';
-      }
-
-      wordTokens.push({
-        text: matchedText,
-        rule,
-        label: TAJWID_COLOR_MAP[rule]?.label
-      });
-
-      lastIndex = matchEnd;
+    if ('نم'.includes(grapheme.base) && SHADDA_PATTERN.test(grapheme.text)) {
+      assignRule(index, 'ghunnah');
+      return;
     }
 
-    if (lastIndex < word.length) {
-      wordTokens.push({ text: word.substring(lastIndex) });
+    const isQalqalahLetter = 'قطبجد'.includes(grapheme.base);
+    const isLastArabicLetter = getNextArabicLetterIndex(graphemes, index) === -1;
+    if (isQalqalahLetter && (SUKUN_PATTERN.test(grapheme.text) || isLastArabicLetter)) {
+      assignRule(index, 'qalqalah');
+      return;
     }
 
-    // Append to total tokens
-    tokens.push(...wordTokens);
   });
 
-  return tokens;
+  return graphemes.reduce<TajwidToken[]>((tokens, grapheme, index) => {
+    const rule = rules[index];
+    const previous = tokens[tokens.length - 1];
+
+    if (previous && previous.rule === rule) {
+      previous.text += grapheme.text;
+      return tokens;
+    }
+
+    tokens.push({
+      text: grapheme.text,
+      rule,
+      label: rule ? TAJWID_COLOR_MAP[rule]?.label : undefined
+    });
+    return tokens;
+  }, []);
 }

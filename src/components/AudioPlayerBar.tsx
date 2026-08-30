@@ -60,22 +60,16 @@ export const AudioPlayerBar: React.FC<AudioPlayerBarProps> = ({
 
   return (
     <div className="fixed bottom-0 left-0 right-0 z-50 bg-[#0F1115]/95 border-t border-[#1F2128] text-[#E2E2E2] backdrop-blur-md shadow-2xl transition-all">
-      {/* Time Progress Bar on Top Edge */}
-      <div
-        className="w-full bg-[#15171E] h-1.5 cursor-pointer relative group"
-        onClick={(e) => {
-          const rect = e.currentTarget.getBoundingClientRect();
-          const percent = ((e.clientX - rect.left) / rect.width) * 100;
-          onSeek(Math.max(0, Math.min(100, percent)));
-        }}
-      >
-        <div
-          className="bg-[#D4AF37] h-full transition-all duration-150 relative"
-          style={{ width: `${audioProgress}%` }}
-        >
-          <div className="absolute right-0 top-1/2 -translate-y-1/2 w-3 h-3 bg-[#D4AF37] rounded-full shadow opacity-0 group-hover:opacity-100 transition-opacity" />
-        </div>
-      </div>
+      <input
+        type="range"
+        min={0}
+        max={100}
+        step={0.1}
+        value={audioProgress}
+        onChange={(event) => onSeek(Number(event.target.value))}
+        aria-label="Posisi audio"
+        className="block w-full h-1.5 accent-[#D4AF37] cursor-pointer"
+      />
 
       <div className="max-w-7xl mx-auto px-4 py-2.5 sm:py-3 flex items-center justify-between gap-3">
         {/* Left: Surah & Verse Info + Qari Button */}
@@ -105,7 +99,7 @@ export const AudioPlayerBar: React.FC<AudioPlayerBarProps> = ({
           <button
             onClick={onPrevVerse}
             className="p-2 rounded-xl text-[#8A8D9A] hover:text-[#E2E2E2] hover:bg-[#1A1C23] transition cursor-pointer"
-            title="Ayat Sebelumnya"
+            aria-label="Ayat sebelumnya"
           >
             <SkipBack className="w-4 h-4 sm:w-5 sm:h-5 fill-current" />
           </button>
@@ -113,7 +107,7 @@ export const AudioPlayerBar: React.FC<AudioPlayerBarProps> = ({
           <button
             onClick={onPlayPause}
             className="p-3 rounded-2xl bg-[#D4AF37] text-[#0A0A0B] hover:bg-[#B8962D] font-bold shadow-lg shadow-[#D4AF37]/20 transition active:scale-95 cursor-pointer"
-            title={playbackState.isPlaying ? 'Jeda Audio' : 'Putar Audio'}
+            aria-label={playbackState.isPlaying ? 'Jeda audio' : 'Putar audio'}
           >
             {playbackState.isPlaying ? (
               <Pause className="w-5 h-5 sm:w-6 sm:h-6 fill-current" />
@@ -125,7 +119,7 @@ export const AudioPlayerBar: React.FC<AudioPlayerBarProps> = ({
           <button
             onClick={onNextVerse}
             className="p-2 rounded-xl text-[#8A8D9A] hover:text-[#E2E2E2] hover:bg-[#1A1C23] transition cursor-pointer"
-            title="Ayat Selanjutnya"
+            aria-label="Ayat selanjutnya"
           >
             <SkipForward className="w-4 h-4 sm:w-5 sm:h-5 fill-current" />
           </button>
@@ -168,7 +162,7 @@ export const AudioPlayerBar: React.FC<AudioPlayerBarProps> = ({
         <div className="absolute bottom-full left-2 right-2 sm:left-4 sm:right-auto sm:w-72 mb-2 bg-[#0F1115] border border-[#1F2128] rounded-2xl shadow-2xl p-2 z-50 animate-fade-in">
           <div className="flex items-center justify-between p-2 border-b border-[#1F2128] mb-1">
             <span className="text-xs font-bold text-[#D4AF37]">Pilih Qari Murottal:</span>
-            <button onClick={() => setShowQariDropdown(false)} className="p-1 cursor-pointer">
+            <button onClick={() => setShowQariDropdown(false)} aria-label="Tutup pilihan qari" className="p-1 cursor-pointer">
               <X className="w-4 h-4 text-[#8A8D9A] hover:text-[#E2E2E2]" />
             </button>
           </div>

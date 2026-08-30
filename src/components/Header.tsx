@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   BookOpen,
   Brain,
@@ -11,7 +11,9 @@ import {
   RotateCcw,
   GraduationCap,
   Sparkles,
-  Cloud
+  Cloud,
+  ChevronDown,
+  ChevronUp
 } from 'lucide-react';
 import { UserSettings, LastRead } from '../types';
 
@@ -46,6 +48,8 @@ export const Header: React.FC<HeaderProps> = ({
   setSearchQuery,
   bookmarksCount
 }) => {
+  const [isNavCollapsed, setIsNavCollapsed] = useState(false);
+
   const toggleTheme = () => {
     const nextTheme = settings.theme === 'light' ? 'dark' : 'light';
     updateSettings({ theme: nextTheme });
@@ -58,12 +62,17 @@ export const Header: React.FC<HeaderProps> = ({
         <div className="flex items-center justify-between h-16 gap-4">
           {/* Logo & Title */}
           <div className="flex items-center gap-3 cursor-pointer" onClick={() => setActiveTab('read')}>
-            <div className="w-10 h-10 rounded-xl bg-[#D4AF37]/10 border border-[#D4AF37]/40 flex items-center justify-center text-[#D4AF37] font-semibold shadow-inner">
-              <span className="text-lg font-bold tracking-tight text-[#D4AF37]">قه</span>
-            </div>
+            <img
+              src="/quran-hafiz-logo.png"
+              alt="Logo Quran Hafiz"
+              className="w-10 h-10 object-contain"
+            />
             <div>
               <h1 className="text-lg sm:text-xl font-bold tracking-wide text-[#D4AF37] font-serif-title flex items-center gap-2">
                 Quran Hafiz
+                {import.meta.env.VITE_APP_VERSION && (
+                  <span className="text-xs text-[#8A8D9A] font-sans font-normal ml-0.5">v{import.meta.env.VITE_APP_VERSION}</span>
+                )}
               </h1>
             </div>
           </div>
@@ -127,7 +136,7 @@ export const Header: React.FC<HeaderProps> = ({
             <button
               onClick={toggleTheme}
               className="p-2 rounded-xl bg-[#1A1C23] text-[#D4AF37] hover:bg-[#2A2D35] border border-[#2A2D35] transition cursor-pointer"
-              title="Ganti Tema"
+              aria-label="Ganti tema"
             >
               {settings.theme === 'light' ? <Moon className="w-4 h-4" /> : <Sun className="w-4 h-4" />}
             </button>
@@ -136,7 +145,7 @@ export const Header: React.FC<HeaderProps> = ({
             <button
               onClick={onOpenSettings}
               className="p-2 rounded-xl bg-[#1A1C23] text-[#8A8D9A] hover:text-[#E2E2E2] hover:bg-[#2A2D35] border border-[#2A2D35] transition cursor-pointer"
-              title="Pengaturan Tampilan & Audio"
+              aria-label="Pengaturan tampilan dan audio"
             >
               <Settings className="w-4 h-4" />
             </button>
@@ -144,6 +153,7 @@ export const Header: React.FC<HeaderProps> = ({
         </div>
 
         {/* Navigation Tabs Bar */}
+        {!isNavCollapsed && (
         <nav className="flex flex-wrap items-center gap-1.5 sm:gap-2 py-2.5 border-t border-[#1F2128]">
           <button
             onClick={() => setActiveTab('read')}
@@ -154,7 +164,7 @@ export const Header: React.FC<HeaderProps> = ({
             }`}
           >
             <BookOpen className="w-4 h-4" />
-            <span>Baca Al-Quran</span>
+            <span className={activeTab === 'read' ? '' : 'hidden sm:inline'}>Baca Al-Quran</span>
           </button>
 
           <button
@@ -166,9 +176,9 @@ export const Header: React.FC<HeaderProps> = ({
             }`}
           >
             <Brain className="w-4 h-4" />
-            <span>Mode Hafalan</span>
+            <span className={activeTab === 'hafalan' ? '' : 'hidden sm:inline'}>Mode Hafalan</span>
             <span className={`px-1.5 py-0.2 text-[9px] rounded font-bold uppercase tracking-wider ${
-              activeTab === 'hafalan' ? 'bg-[#0A0A0B] text-[#D4AF37]' : 'bg-[#1A1C23] text-[#D4AF37] border border-[#2A2D35]'
+              activeTab === 'hafalan' ? 'bg-[#0A0A0B] text-[#D4AF37]' : 'hidden sm:inline bg-[#1A1C23] text-[#D4AF37] border border-[#2A2D35]'
             }`}>Hafiz</span>
           </button>
 
@@ -181,9 +191,9 @@ export const Header: React.FC<HeaderProps> = ({
             }`}
           >
             <GraduationCap className="w-4 h-4" />
-            <span>Ujian Tahfidz</span>
+            <span className={activeTab === 'ujian' ? '' : 'hidden sm:inline'}>Ujian Tahfidz</span>
             <span className={`px-1.5 py-0.2 text-[9px] rounded font-bold uppercase tracking-wider ${
-              activeTab === 'ujian' ? 'bg-[#0A0A0B] text-[#D4AF37]' : 'bg-[#1A1C23] text-[#D4AF37] border border-[#2A2D35]'
+              activeTab === 'ujian' ? 'bg-[#0A0A0B] text-[#D4AF37]' : 'hidden sm:inline bg-[#1A1C23] text-[#D4AF37] border border-[#2A2D35]'
             }`}>Ikhtibar</span>
           </button>
 
@@ -196,9 +206,9 @@ export const Header: React.FC<HeaderProps> = ({
             }`}
           >
             <Sparkles className="w-4 h-4" />
-            <span>Hukum Tajwid</span>
+            <span className={activeTab === 'tajwid' ? '' : 'hidden sm:inline'}>Hukum Tajwid</span>
             <span className={`px-1.5 py-0.2 text-[9px] rounded font-bold uppercase tracking-wider ${
-              activeTab === 'tajwid' ? 'bg-[#0A0A0B] text-[#D4AF37]' : 'bg-[#1A1C23] text-[#D4AF37] border border-[#2A2D35]'
+              activeTab === 'tajwid' ? 'bg-[#0A0A0B] text-[#D4AF37]' : 'hidden sm:inline bg-[#1A1C23] text-[#D4AF37] border border-[#2A2D35]'
             }`}>Tartil</span>
           </button>
 
@@ -211,10 +221,10 @@ export const Header: React.FC<HeaderProps> = ({
             }`}
           >
             <Bookmark className="w-4 h-4" />
-            <span>Bookmark</span>
+            <span className={activeTab === 'bookmark' ? '' : 'hidden sm:inline'}>Bookmark</span>
             {bookmarksCount > 0 && (
               <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-bold ${
-                activeTab === 'bookmark' ? 'bg-[#0A0A0B] text-[#D4AF37]' : 'bg-[#D4AF37] text-[#0A0A0B]'
+                activeTab === 'bookmark' ? 'bg-[#0A0A0B] text-[#D4AF37]' : 'hidden sm:inline bg-[#D4AF37] text-[#0A0A0B]'
               }`}>
                 {bookmarksCount}
               </span>
@@ -230,9 +240,23 @@ export const Header: React.FC<HeaderProps> = ({
             }`}
           >
             <BarChart3 className="w-4 h-4" />
-            <span>Progres Hafalan</span>
+            <span className={activeTab === 'progress' ? '' : 'hidden sm:inline'}>Progres Hafalan</span>
           </button>
         </nav>
+        )}
+
+        <div className="flex h-4 items-end justify-end">
+          <button
+            type="button"
+            onClick={() => setIsNavCollapsed((collapsed) => !collapsed)}
+            aria-label={isNavCollapsed ? 'Perbesar navbar' : 'Kecilkan navbar'}
+            aria-expanded={!isNavCollapsed}
+            title={isNavCollapsed ? 'Perbesar navbar' : 'Kecilkan navbar'}
+            className="flex h-4 w-9 items-center justify-center rounded-t-lg border border-b-0 border-[#2A2D35] bg-[#15171E] text-[#D4AF37] hover:bg-[#1A1C23] hover:border-[#D4AF37]/50 transition cursor-pointer"
+          >
+            {isNavCollapsed ? <ChevronDown className="w-3 h-3" /> : <ChevronUp className="w-3 h-3" />}
+          </button>
+        </div>
       </div>
     </header>
   );

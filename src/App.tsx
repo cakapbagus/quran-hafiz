@@ -10,7 +10,7 @@ import {
 } from './types';
 import { ALL_SURAHS } from './data/surahList';
 import { getVerseAudioUrl, QARIS } from './data/qaris';
-import { fetchSurahDetail } from './services/quranApi';
+import { clearQuranCache, fetchSurahDetail } from './services/quranApi';
 import {
   getStoredSettings,
   saveStoredSettings,
@@ -22,15 +22,16 @@ import {
   updateHafalanRecord,
   getStoredLastRead,
   saveLastRead,
-  saveStoredBookmarks,
-  saveStoredHafalanRecords,
+  restoreStoredDataAtomically,
   DEFAULT_SETTINGS
 } from './services/storageService';
 import {
   getStoredAccessToken,
   getStoredGoogleUser,
   uploadCloudBackup,
-  buildBackupPayload
+  findCloudBackupFile,
+  buildBackupPayload,
+  getStoredLastSyncedAt
 } from './services/googleDriveService';
 
 import { Header, MainTabType } from './components/Header';
@@ -51,6 +52,8 @@ export default function App() {
   const [selectedSurahNumber, setSelectedSurahNumber] = useState<number | null>(null);
   const [currentSurahDetail, setCurrentSurahDetail] = useState<SurahDetail | null>(null);
   const [isLoadingSurah, setIsLoadingSurah] = useState<boolean>(false);
+  const [surahLoadError, setSurahLoadError] = useState<string | null>(null);
+  const [surahLoadAttempt, setSurahLoadAttempt] = useState(0);
   const [searchQuery, setSearchQuery] = useState<string>('');
 
   // Local Storage states
@@ -72,7 +75,6 @@ export default function App() {
     verseNumber: null,
     qariId: settings.selectedQariId || 'mishary',
     playbackSpeed: 1.0,
-    loopMode: 'none',
     repeatCountCurrent: 1,
     repeatCountTarget: 1,
     rangeStartVerse: null,
@@ -86,6 +88,14 @@ export default function App() {
 
   // Audio HTML Element Ref
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const pendingReadActionRef = useRef<{ verseNumber: number; play: boolean } | null>(null);
+  const playbackStateRef = useRef(playbackState);
+  const settingsRef = useRef(settings);
+  const surahDetailRef = useRef(currentSurahDetail);
+
+  playbackStateRef.current = playbackState;
+  settingsRef.current = settings;
+  surahDetailRef.current = currentSurahDetail;
 
   // Apply Dark/Light theme class to html element
   useEffect(() => {
@@ -97,9 +107,8 @@ export default function App() {
     saveStoredSettings(settings);
   }, [settings]);
 
-  // Debounced auto-sync with Google Drive if enabled & connected
+  // Debounced automatic sync whenever Google Drive is connected.
   useEffect(() => {
-    if (!settings.autoCloudSync) return;
     const token = getStoredAccessToken();
     if (!token) return;
 
@@ -111,9 +120,22 @@ export default function App() {
         lastRead,
         getStoredGoogleUser()?.email
       );
-      uploadCloudBackup(token, payload).catch((e) => {
-        console.warn('Background auto-sync failed silently:', e);
-      });
+      findCloudBackupFile(token)
+        .then((file) => {
+          const lastSyncedAt = getStoredLastSyncedAt();
+          const cloudChangedSinceLastSync = file && (
+            !lastSyncedAt || new Date(file.modifiedTime).getTime() > new Date(lastSyncedAt).getTime() + 1000
+          );
+          if (cloudChangedSinceLastSync) {
+            setIsCloudSyncOpen(true);
+            return;
+          }
+          return uploadCloudBackup(token, payload, file?.id);
+        })
+        .catch((e) => {
+          console.warn('Background auto-sync failed:', e);
+          if (!getStoredAccessToken()) setIsCloudConnected(false);
+        });
     }, 4000);
 
     return () => clearTimeout(timer);
@@ -140,49 +162,27 @@ export default function App() {
     };
 
     const handleEnded = () => {
-      setPlaybackState((prev) => {
-        if (!prev.surahNumber || !prev.verseNumber) return prev;
-
-        // Check repetition / looping logic
-        if (prev.repeatCountCurrent < prev.repeatCountTarget) {
-          // Replay same verse
-          setTimeout(() => {
-            if (audioRef.current) {
-              audioRef.current.currentTime = 0;
-              audioRef.current.play().catch(console.error);
-            }
-          }, 300);
-
-          return {
-            ...prev,
-            repeatCountCurrent: prev.repeatCountCurrent + 1
-          };
-        }
-
-        // Target repetitions completed for current verse -> advance to next verse in range or surah
-        let nextVerseNum = prev.verseNumber + 1;
-        const maxVerse = prev.rangeEndVerse || currentSurahDetail?.jumlahAyat || 286;
-
-        if (nextVerseNum <= maxVerse) {
-          // Play next verse
-          setTimeout(() => {
-            playVerseAudioInternal(prev.surahNumber!, nextVerseNum, prev.qariId, prev.playbackSpeed);
-          }, 400);
-
-          return {
-            ...prev,
-            verseNumber: nextVerseNum,
-            repeatCountCurrent: 1
-          };
-        } else {
-          // Reached end of range or surah
-          return {
-            ...prev,
-            isPlaying: false,
-            repeatCountCurrent: 1
-          };
-        }
-      });
+      const prev = playbackStateRef.current;
+      if (!prev.surahNumber || !prev.verseNumber) return;
+      if (prev.repeatCountCurrent < prev.repeatCountTarget) {
+        audio.currentTime = 0;
+        audio.play().catch((error) => console.warn('Audio replay failed:', error));
+        setPlaybackState({ ...prev, repeatCountCurrent: prev.repeatCountCurrent + 1 });
+        return;
+      }
+      const nextVerseNum = prev.verseNumber + 1;
+      const maxVerse = prev.rangeEndVerse || surahDetailRef.current?.jumlahAyat || 286;
+      if (settingsRef.current.autoPlayNextVerse && nextVerseNum <= maxVerse) {
+        const verse = surahDetailRef.current?.nomor === prev.surahNumber
+          ? surahDetailRef.current.ayat.find((item) => item.nomorAyat === nextVerseNum)
+          : undefined;
+        audio.src = getVerseAudioUrl(prev.surahNumber, nextVerseNum, prev.qariId, verse?.audio);
+        audio.playbackRate = prev.playbackSpeed;
+        audio.play().catch((error) => console.warn('Audio next verse failed:', error));
+        setPlaybackState({ ...prev, verseNumber: nextVerseNum, repeatCountCurrent: 1, isPlaying: true });
+        return;
+      }
+      setPlaybackState({ ...prev, isPlaying: false, repeatCountCurrent: 1 });
     };
 
     audio.addEventListener('timeupdate', handleTimeUpdate);
@@ -193,16 +193,18 @@ export default function App() {
       audio.removeEventListener('ended', handleEnded);
       audio.pause();
     };
-  }, [currentSurahDetail]);
+  }, []);
 
   // Load Surah Detail when selectedSurahNumber changes
   useEffect(() => {
     if (selectedSurahNumber === null) return;
 
     let isMounted = true;
+    const controller = new AbortController();
     setIsLoadingSurah(true);
+    setSurahLoadError(null);
 
-    fetchSurahDetail(selectedSurahNumber)
+    fetchSurahDetail(selectedSurahNumber, controller.signal)
       .then((detail) => {
         if (isMounted) {
           setCurrentSurahDetail(detail);
@@ -210,14 +212,20 @@ export default function App() {
         }
       })
       .catch((err) => {
+        if (controller.signal.aborted) return;
         console.error('Failed to load surah detail:', err);
-        if (isMounted) setIsLoadingSurah(false);
+        if (isMounted) {
+          setIsLoadingSurah(false);
+          pendingReadActionRef.current = null;
+          setSurahLoadError(err instanceof Error ? err.message : 'Gagal memuat data surah.');
+        }
       });
 
     return () => {
       isMounted = false;
+      controller.abort();
     };
-  }, [selectedSurahNumber]);
+  }, [selectedSurahNumber, surahLoadAttempt]);
 
   // Helper to play audio
   const playVerseAudioInternal = (
@@ -229,7 +237,9 @@ export default function App() {
     if (!audioRef.current) return;
 
     // Determine audio url
-    const verseObj = currentSurahDetail?.ayat.find((v) => v.nomorAyat === verseNum);
+    const verseObj = currentSurahDetail?.nomor === surahNum
+      ? currentSurahDetail.ayat.find((v) => v.nomorAyat === verseNum)
+      : undefined;
     const audioUrl = getVerseAudioUrl(surahNum, verseNum, qariId, verseObj?.audio);
 
     audioRef.current.src = audioUrl;
@@ -264,6 +274,17 @@ export default function App() {
       console.warn('Audio playback interrupted or failed:', e);
     });
   };
+
+  useEffect(() => {
+    const pending = pendingReadActionRef.current;
+    if (!currentSurahDetail || !pending || currentSurahDetail.nomor !== selectedSurahNumber) return;
+    pendingReadActionRef.current = null;
+    if (pending.play) {
+      playVerseAudioInternal(currentSurahDetail.nomor, pending.verseNumber, playbackState.qariId, playbackState.playbackSpeed);
+    } else {
+      requestAnimationFrame(() => document.getElementById('verse-' + currentSurahDetail.nomor + '-' + pending.verseNumber)?.scrollIntoView({ behavior: 'smooth', block: 'center' }));
+    }
+  }, [activeTab, currentSurahDetail, selectedSurahNumber]);
 
   const handlePlayVerse = (verseNumber: number) => {
     if (!currentSurahDetail) return;
@@ -307,7 +328,7 @@ export default function App() {
       if (playbackState.surahNumber && playbackState.verseNumber) {
         audioRef.current.play().then(() => {
           setPlaybackState((prev) => ({ ...prev, isPlaying: true }));
-        });
+        }).catch((error) => console.warn('Audio playback failed:', error));
       } else if (currentSurahDetail) {
         handlePlayVerse(1);
       }
@@ -407,21 +428,16 @@ export default function App() {
 
   const handleResumeLastRead = () => {
     if (lastRead) {
+      pendingReadActionRef.current = { verseNumber: lastRead.verseNumber, play: true };
       setSelectedSurahNumber(lastRead.surahNumber);
       setActiveTab('read');
-      setTimeout(() => {
-        handlePlayVerse(lastRead.verseNumber);
-      }, 500);
     }
   };
 
   const handleJumpToBookmark = (surahNum: number, verseNum: number) => {
+    pendingReadActionRef.current = { verseNumber: verseNum, play: false };
     setSelectedSurahNumber(surahNum);
     setActiveTab('read');
-    setTimeout(() => {
-      const elem = document.getElementById(`verse-${surahNum}-${verseNum}`);
-      if (elem) elem.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    }, 600);
   };
 
   const handleOpenHafalanForVerse = (surahNum: number, verseNum: number) => {
@@ -438,32 +454,21 @@ export default function App() {
     hafalanRecords?: Record<string, HafalanVerseRecord>;
     lastRead?: LastRead | null;
   }) => {
-    if (data.settings) {
-      const mergedSettings = {
-        ...data.settings,
-        customApiKey: data.customApiKey || data.settings.customApiKey
-      };
-      setSettings(mergedSettings);
-      saveStoredSettings(mergedSettings);
-    }
-    if (data.bookmarks) {
-      setBookmarks(data.bookmarks);
-      saveStoredBookmarks(data.bookmarks);
-    }
-    if (data.hafalanRecords) {
-      setHafalanRecords(data.hafalanRecords);
-      saveStoredHafalanRecords(data.hafalanRecords);
-    }
-    if (data.lastRead !== undefined) {
-      setLastRead(data.lastRead);
-      if (data.lastRead) {
-        saveLastRead(data.lastRead);
-      }
-    }
+    const mergedSettings = data.settings
+      ? { ...DEFAULT_SETTINGS, ...data.settings, customApiKey: settings.customApiKey }
+      : settings;
+    const nextBookmarks = data.bookmarks ?? bookmarks;
+    const nextRecords = data.hafalanRecords ?? hafalanRecords;
+    const nextLastRead = data.lastRead !== undefined ? data.lastRead : lastRead;
+    restoreStoredDataAtomically(mergedSettings, nextBookmarks, nextRecords, nextLastRead);
+    setSettings(mergedSettings);
+    setBookmarks(nextBookmarks);
+    setHafalanRecords(nextRecords);
+    setLastRead(nextLastRead);
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-zinc-950 text-gray-900 dark:text-zinc-100 font-sans transition-colors duration-300 flex flex-col">
+    <div className="min-h-screen bg-(--bg-app) text-(--text-main) font-sans transition-colors duration-300 flex flex-col">
       {/* Header */}
       <Header
         activeTab={activeTab}
@@ -494,8 +499,8 @@ export default function App() {
               <SurahList
                 onSelectSurah={handleSelectSurah}
                 onPlaySurahAudio={(sNum) => {
+                  pendingReadActionRef.current = { verseNumber: 1, play: true };
                   setSelectedSurahNumber(sNum);
-                  setTimeout(() => handlePlayVerse(1), 500);
                 }}
                 lastRead={lastRead}
                 hafalanRecords={hafalanRecords}
@@ -508,6 +513,16 @@ export default function App() {
                 <p className="text-sm font-semibold text-emerald-800 dark:text-amber-300">
                   Memuat Surah Ke-{selectedSurahNumber}...
                 </p>
+              </div>
+            ) : surahLoadError ? (
+              <div className="text-center py-24 space-y-4" role="alert">
+                <p className="text-sm font-semibold text-red-500">{surahLoadError}</p>
+                <button
+                  onClick={() => setSurahLoadAttempt((attempt) => attempt + 1)}
+                  className="px-4 py-2 rounded-xl bg-amber-400 text-zinc-950 text-xs font-bold cursor-pointer"
+                >
+                  Coba Lagi
+                </button>
               </div>
             ) : currentSurahDetail ? (
               <div>
@@ -536,6 +551,7 @@ export default function App() {
                   activePlayingVerse={
                     playbackState.surahNumber === currentSurahDetail.nomor ? playbackState.verseNumber : null
                   }
+                  targetVerseNumber={pendingReadActionRef.current?.verseNumber}
                 />
               </div>
             ) : null}
@@ -563,7 +579,11 @@ export default function App() {
         {/* Tab 3: Mode Ujian Tahfidz (Ikhtibar) */}
         {activeTab === 'ujian' && (
           <ModeUjianTahfidzView
-            onMarkVerseReviewNeeded={(sNum, vNum) => handleUpdateHafalanStatus(vNum, 'review_needed')}
+            onMarkVerseReviewNeeded={(sNum, vNum) => {
+              if (!sNum) return;
+              updateHafalanRecord(sNum, vNum, { status: 'review_needed' });
+              setHafalanRecords(getStoredHafalanRecords());
+            }}
             onOpenVerseReader={(sNum, vNum) => {
               setSelectedSurahNumber(sNum);
               setActiveTab('read');
@@ -620,7 +640,6 @@ export default function App() {
           setIsCloudConnected(!!getStoredAccessToken());
         }}
         settings={settings}
-        onUpdateSettings={(newSettings) => setSettings((prev) => ({ ...prev, ...newSettings }))}
         bookmarks={bookmarks}
         hafalanRecords={hafalanRecords}
         lastRead={lastRead}
@@ -631,13 +650,13 @@ export default function App() {
       {isSettingsOpen && (
         <SettingsModal
           settings={settings}
-          onUpdateSettings={(newSettings) => setSettings((prev) => ({ ...prev, ...newSettings }))}
           onClose={() => setIsSettingsOpen(false)}
           onOpenCloudSync={() => setIsCloudSyncOpen(true)}
+          onUpdateSettings={(newSettings) => setSettings((prev) => ({ ...prev, ...newSettings }))}
           onClearCache={() => {
-            localStorage.clear();
-            alert('Cache berhasil dibersihkan!');
-            window.location.reload();
+            clearQuranCache()
+              .then(() => window.location.reload())
+              .catch((error) => console.warn('Failed to clear Quran cache:', error));
           }}
         />
       )}

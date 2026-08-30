@@ -60,6 +60,7 @@ export const ModeUjianTahfidzView: React.FC<ModeUjianTahfidzViewProps> = ({
     customStartVerse: 1,
     customEndVerse: 30,
     questionCount: 10,
+    difficulty: 'medium',
     allowedTypes: ['continue_verse', 'next_verse', 'guess_surah', 'word_scramble', 'fawasil_ending'],
     timerSecondsPerQuestion: 0,
     includeAudioPrompts: true
@@ -91,6 +92,8 @@ export const ModeUjianTahfidzView: React.FC<ModeUjianTahfidzViewProps> = ({
   const [latestResult, setLatestResult] = useState<ExamResultSummary | null>(null);
   const [examHistory, setExamHistory] = useState<ExamResultSummary[]>(getStoredExamHistory());
   const [markedCount, setMarkedCount] = useState<number>(0);
+  const [examError, setExamError] = useState<string | null>(null);
+  const submitAnswerRef = useRef<(isTimeout?: boolean) => void>(() => undefined);
 
   // Audio helper
   const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -118,7 +121,7 @@ export const ModeUjianTahfidzView: React.FC<ModeUjianTahfidzViewProps> = ({
         if (prev <= 1) {
           clearInterval(interval);
           // Auto submit timeout
-          handleSubmitAnswer(true);
+          submitAnswerRef.current(true);
           return 0;
         }
         return prev - 1;
@@ -149,11 +152,12 @@ export const ModeUjianTahfidzView: React.FC<ModeUjianTahfidzViewProps> = ({
   }, [currentIndex, viewState, questions]);
 
   const handleStartExam = async () => {
+    setExamError(null);
     setViewState('loading');
     try {
       const generated = await generateExamQuestions(config);
       if (generated.length === 0) {
-        alert('Gagal menghasilkan soal ujian. Silakan coba pilih surah lain.');
+        setExamError('Gagal menghasilkan soal ujian. Pilih cakupan lain.');
         setViewState('setup');
         return;
       }
@@ -164,7 +168,7 @@ export const ModeUjianTahfidzView: React.FC<ModeUjianTahfidzViewProps> = ({
       setViewState('active');
     } catch (e) {
       console.error('Failed to start exam:', e);
-      alert('Terjadi kesalahan saat menyiapkan soal ujian.');
+      setExamError(e instanceof Error ? e.message : 'Terjadi kesalahan saat menyiapkan soal ujian.');
       setViewState('setup');
     }
   };
@@ -241,6 +245,8 @@ export const ModeUjianTahfidzView: React.FC<ModeUjianTahfidzViewProps> = ({
     setHasSubmittedCurrent(true);
   };
 
+  submitAnswerRef.current = handleSubmitAnswer;
+
   const handleNextQuestion = () => {
     if (currentIndex < questions.length - 1) {
       setCurrentIndex((prev) => prev + 1);
@@ -271,6 +277,7 @@ export const ModeUjianTahfidzView: React.FC<ModeUjianTahfidzViewProps> = ({
       {/* 1. LOBI SETUP UJIAN */}
       {viewState === 'setup' && (
         <div className="space-y-6">
+          {examError && <p role="alert" className="p-3 rounded-xl bg-red-500/10 text-red-400 text-sm">{examError}</p>}
           {/* Banner */}
           <div className="bg-[#0F1115] text-[#E2E2E2] rounded-3xl p-6 sm:p-8 shadow-2xl border border-[#1F2128] relative overflow-hidden">
             <div className="absolute -right-10 -bottom-10 w-48 h-48 bg-[#D4AF37]/10 rounded-full blur-3xl pointer-events-none" />
@@ -578,10 +585,46 @@ export const ModeUjianTahfidzView: React.FC<ModeUjianTahfidzViewProps> = ({
               </div>
             </div>
 
-            {/* 3. Tipe Variasi Soal */}
+            {/* 3. Tingkat Kesulitan */}
+            <div className="space-y-3 pt-4 border-t border-[#1F2128]">
+              <label className="text-xs font-bold text-[#8A8D9A] uppercase tracking-wider flex items-center gap-2">
+                <Sliders className="w-4 h-4 text-[#D4AF37]" />
+                3. Tingkat Kesulitan
+              </label>
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                {[
+                  { id: 'easy', label: 'Mudah', desc: 'Opsi berasal dari surah berbeda bila tersedia' },
+                  { id: 'medium', label: 'Sedang', desc: 'Opsi diprioritaskan dari surah yang sama' },
+                  { id: 'hard', label: 'Sulit', desc: 'Opsi dari surah sama dengan nomor ayat berdekatan' }
+                ].map((difficulty) => {
+                  const isSelected = config.difficulty === difficulty.id;
+                  return (
+                    <button
+                      key={difficulty.id}
+                      type="button"
+                      onClick={() => setConfig((prev) => ({
+                        ...prev,
+                        difficulty: difficulty.id as ExamConfig['difficulty']
+                      }))}
+                      className={`p-3.5 rounded-2xl border text-left transition-all cursor-pointer ${
+                        isSelected
+                          ? 'bg-[#1A1C23] border-[#D4AF37]/60 text-[#E2E2E2]'
+                          : 'bg-[#0F1115] border-[#2A2D35] text-[#8A8D9A] hover:border-[#3A3D48]'
+                      }`}
+                    >
+                      <span className="text-xs font-bold block">{difficulty.label}</span>
+                      <span className="text-[10px] text-[#8A8D9A]">{difficulty.desc}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* 4. Tipe Variasi Soal */}
             <div className="space-y-3 pt-4 border-t border-[#1F2128]">
               <label className="text-xs font-bold text-[#8A8D9A] uppercase tracking-wider block">
-                3. Tipe Tantangan / Variasi Soal
+                4. Tipe Tantangan / Variasi Soal
               </label>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -629,10 +672,10 @@ export const ModeUjianTahfidzView: React.FC<ModeUjianTahfidzViewProps> = ({
               </div>
             </div>
 
-            {/* 4. Timer & Audio Options */}
+            {/* 5. Timer & Audio Options */}
             <div className="space-y-3 pt-4 border-t border-[#1F2128]">
               <label className="text-xs font-bold text-[#8A8D9A] uppercase tracking-wider block">
-                4. Batas Waktu & Bantuan Audio
+                5. Batas Waktu & Bantuan Audio
               </label>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -808,7 +851,7 @@ export const ModeUjianTahfidzView: React.FC<ModeUjianTahfidzViewProps> = ({
                           {hasSubmittedCurrent && isCorrect ? '✓' : ''}
                         </div>
                         {opt.textIndonesia && (
-                          <span className="text-xs text-[#8A8D9A] italic break-words">
+                          <span className="text-xs text-[#8A8D9A] italic wrap-break-word">
                             {opt.textIndonesia}
                           </span>
                         )}
@@ -827,7 +870,7 @@ export const ModeUjianTahfidzView: React.FC<ModeUjianTahfidzViewProps> = ({
             {questions[currentIndex].type === 'word_scramble' && (
               <div className="space-y-5 pt-2">
                 {/* Destination Drop Area / Arranged Words */}
-                <div className="p-5 rounded-2xl bg-[#0F1115] border-2 border-dashed border-[#D4AF37]/40 min-h-[90px] flex flex-wrap flex-row-reverse items-center justify-start gap-2.5">
+                <div className="p-5 rounded-2xl bg-[#0F1115] border-2 border-dashed border-[#D4AF37]/40 min-h-22.5 flex flex-wrap flex-row-reverse items-center justify-start gap-2.5">
                   {arrangedSlots.length === 0 ? (
                     <p className="text-xs text-[#6A6D7A] text-center w-full py-3 italic">
                       Ketuk kata-kata di bawah untuk menyusun urutan ayat dari kanan ke kiri...

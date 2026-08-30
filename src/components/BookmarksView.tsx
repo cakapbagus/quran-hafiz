@@ -89,7 +89,7 @@ export const BookmarksView: React.FC<BookmarksViewProps> = ({
                   <button
                     onClick={() => onRemoveBookmark(bm.surahNumber, bm.verseNumber)}
                     className="p-1.5 rounded-xl text-[#8A8D9A] hover:text-red-400 hover:bg-[#0F1115] transition cursor-pointer"
-                    title="Hapus Bookmark"
+                    aria-label="Hapus bookmark"
                   >
                     <Trash2 className="w-4 h-4" />
                   </button>

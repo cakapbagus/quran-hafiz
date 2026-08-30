@@ -1,7 +1,8 @@
 import React from 'react';
+import { useDialogAccessibility } from '../hooks/useDialogAccessibility';
 import { UserSettings } from '../types';
 import { QARIS } from '../data/qaris';
-import { X, Sliders, Type, Volume2, Moon, Sun, Trash2, Cloud, Sparkles } from 'lucide-react';
+import { X, Sliders, Type, Volume2, Moon, Sun, Trash2, Cloud, Sparkles, BookOpen, Rows3 } from 'lucide-react';
 
 interface SettingsModalProps {
   settings: UserSettings;
@@ -18,16 +19,18 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   onClearCache,
   onOpenCloudSync
 }) => {
+  const dialogRef = useDialogAccessibility(onClose);
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fade-in">
-      <div className="bg-[#15171E] rounded-3xl max-w-lg w-full p-6 space-y-6 shadow-2xl border border-[#1F2128] max-h-[90vh] overflow-y-auto">
+      <div ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby="settings-dialog-title" className="bg-[#15171E] rounded-3xl max-w-lg w-full p-6 space-y-6 shadow-2xl border border-[#1F2128] max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between pb-3 border-b border-[#1F2128]">
-          <h2 className="text-lg font-bold text-[#E2E2E2] flex items-center gap-2 font-serif-title">
+          <h2 id="settings-dialog-title" className="text-lg font-bold text-[#E2E2E2] flex items-center gap-2 font-serif-title">
             <Sliders className="w-5 h-5 text-[#D4AF37]" />
             <span>Pengaturan Aplikasi</span>
           </h2>
           <button
             onClick={onClose}
+            aria-label="Tutup dialog"
             className="p-1 rounded-xl text-[#8A8D9A] hover:text-[#E2E2E2] cursor-pointer"
           >
             <X className="w-5 h-5" />
@@ -36,7 +39,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
 
         {/* Cloud Sync Google Drive Banner */}
         {onOpenCloudSync && (
-          <div className="p-4 rounded-2xl bg-gradient-to-r from-[#D4AF37]/15 to-[#D4AF37]/5 border border-[#D4AF37]/30 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className="p-4 rounded-2xl bg-linear-to-r from-[#D4AF37]/15 to-[#D4AF37]/5 border border-[#D4AF37]/30 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div className="flex items-center gap-3">
               <div className="w-9 h-9 rounded-xl bg-[#D4AF37]/20 border border-[#D4AF37]/40 flex items-center justify-center text-[#D4AF37] shrink-0">
                 <Cloud className="w-5 h-5" />
@@ -47,7 +50,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                   <Sparkles className="w-3 h-3 text-[#D4AF37]" />
                 </h4>
                 <p className="text-[10px] text-[#8A8D9A]">
-                  Cadangkan bookmark, progres hafalan, dan kredensial API ke akun Google
+                  Cadangkan pengaturan, bookmark, dan progres hafalan ke akun Google
                 </p>
               </div>
             </div>
@@ -102,6 +105,51 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
           </div>
         </div>
 
+        {/* Quran Display Modes */}
+        <div className="space-y-3 border-t border-[#1F2128] pt-2">
+          <h3 className="flex items-center gap-2 text-xs font-bold uppercase tracking-wide text-[#8A8D9A]">
+            <BookOpen className="h-4 w-4 text-[#D4AF37]" />
+            <span>Model Tampilan Alquran</span>
+          </h3>
+
+          {([
+            { key: 'readDisplayMode', label: 'Baca Alquran' },
+            { key: 'hafalanDisplayMode', label: 'Mode Hafalan' }
+          ] as const).map(({ key, label }) => (
+            <div key={key} className="space-y-2 rounded-2xl border border-[#2A2D35] bg-[#0F1115] p-3">
+              <p className="text-xs font-semibold text-[#E2E2E2]">{label}</p>
+              <div className="grid grid-cols-2 gap-2" role="group" aria-label={`Tampilan ${label}`}>
+                <button
+                  type="button"
+                  onClick={() => onUpdateSettings({ [key]: 'verse' })}
+                  className={`flex items-center justify-center gap-2 rounded-xl border px-3 py-2 text-xs font-bold transition cursor-pointer ${
+                    settings[key] === 'verse'
+                      ? 'border-[#D4AF37] bg-[#D4AF37]/15 text-[#D4AF37]'
+                      : 'border-[#2A2D35] bg-[#15171E] text-[#8A8D9A] hover:text-[#E2E2E2]'
+                  }`}
+                  aria-pressed={settings[key] === 'verse'}
+                >
+                  <Rows3 className="h-4 w-4" />
+                  Per Ayat
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onUpdateSettings({ [key]: 'mushaf' })}
+                  className={`flex items-center justify-center gap-2 rounded-xl border px-3 py-2 text-xs font-bold transition cursor-pointer ${
+                    settings[key] === 'mushaf'
+                      ? 'border-[#D4AF37] bg-[#D4AF37]/15 text-[#D4AF37]'
+                      : 'border-[#2A2D35] bg-[#15171E] text-[#8A8D9A] hover:text-[#E2E2E2]'
+                  }`}
+                  aria-pressed={settings[key] === 'mushaf'}
+                >
+                  <BookOpen className="h-4 w-4" />
+                  Mushaf
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+
         {/* Font Size Settings */}
         <div className="space-y-3">
           <h3 className="text-xs font-bold text-[#8A8D9A] uppercase tracking-wide flex items-center gap-2">
@@ -129,7 +177,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
 
           <label className="flex items-center justify-between p-3 rounded-2xl bg-[#0F1115] border border-[#2A2D35] cursor-pointer hover:border-[#D4AF37]/50 transition">
             <div className="space-y-0.5">
-              <span className="text-xs font-semibold text-[#E2E2E2] block flex items-center gap-1.5">
+              <span className="text-xs font-semibold text-[#E2E2E2] flex items-center gap-1.5">
                 <span>Tajwid Berwarna pada Teks Arab</span>
                 <span className="text-[10px] px-1.5 py-0.2 rounded bg-[#D4AF37]/20 text-[#D4AF37] font-bold">Rekomendasi</span>
               </span>

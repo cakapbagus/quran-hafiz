@@ -50,7 +50,7 @@ untuk fitur bawaan aplikasi ini.
 
 Fitur "Cloud Sync" memakai Google Identity Services (OAuth) dan Google Drive
 API langsung dari browser (`src/services/googleDriveService.ts`). Client ID
-default di file tersebut adalah placeholder dan **tidak akan berfungsi** di
+default dibaca dari `VITE_GOOGLE_CLIENT_ID` dan tidak tersedia otomatis di
 domain produksi Anda. Untuk mengaktifkan fitur ini setelah deploy:
 
 1. Buat OAuth 2.0 Client ID (tipe "Web application") di

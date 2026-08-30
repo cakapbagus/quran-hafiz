@@ -16,6 +16,38 @@ interface TajwidGuideViewProps {
   onOpenQuranForExample?: (surahNumber: number, verseNumber: number) => void;
 }
 
+interface ExampleSegment {
+  text: string;
+  highlighted: boolean;
+}
+
+const splitExampleByHighlights = (text: string, highlights: string[]): ExampleSegment[] => {
+  const patterns = [...highlights].filter(Boolean).sort((a, b) => b.length - a.length);
+  const segments: ExampleSegment[] = [];
+  let cursor = 0;
+
+  while (cursor < text.length) {
+    const matchingPattern = patterns.find((pattern) => text.startsWith(pattern, cursor));
+
+    if (matchingPattern) {
+      segments.push({ text: matchingPattern, highlighted: true });
+      cursor += matchingPattern.length;
+      continue;
+    }
+
+    const nextHighlightIndex = patterns.reduce((nearest, pattern) => {
+      const index = text.indexOf(pattern, cursor + 1);
+      return index !== -1 && (nearest === -1 || index < nearest) ? index : nearest;
+    }, -1);
+    const plainTextEnd = nextHighlightIndex === -1 ? text.length : nextHighlightIndex;
+
+    segments.push({ text: text.slice(cursor, plainTextEnd), highlighted: false });
+    cursor = plainTextEnd;
+  }
+
+  return segments;
+};
+
 export const TajwidGuideView: React.FC<TajwidGuideViewProps> = () => {
   const [selectedCategory, setSelectedCategory] = useState<string>('Semua');
   const [searchQuery, setSearchQuery] = useState<string>('');
@@ -270,11 +302,17 @@ export const TajwidGuideView: React.FC<TajwidGuideViewProps> = () => {
               </h4>
               <div className="p-5 rounded-2xl bg-[#15171E] border border-[#2A2D35] text-right">
                 <p
-                  className="font-arabic font-bold text-2xl sm:text-3xl leading-loose tracking-wide"
-                  style={{ color: activeRule.color }}
+                  className="font-arabic font-bold text-2xl sm:text-3xl leading-loose tracking-wide text-[#E2E2E2]"
                   dir="rtl"
                 >
-                  {activeRule.contohLafaz}
+                  {splitExampleByHighlights(activeRule.contohLafaz, activeRule.contohSorotan).map((segment, index) => (
+                    <span
+                      key={`${index}-${segment.text}`}
+                      style={segment.highlighted ? { color: activeRule.color } : undefined}
+                    >
+                      {segment.text}
+                    </span>
+                  ))}
                 </p>
               </div>
             </div>

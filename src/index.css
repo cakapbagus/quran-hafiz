@@ -1,30 +1,32 @@
-@import url('https://fonts.googleapis.com/css2?family=Amiri:ital,wght@0,400;0,700;1,400&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Cinzel:wght@500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Scheherazade+New:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Cinzel:wght@500;600;700&display=swap');
 @import "tailwindcss";
 
 :root {
-  --bg-app: #F8F6F0;
-  --bg-header: rgba(248, 246, 240, 0.96);
-  --bg-card: #FFFFFF;
-  --bg-card-hover: #F3EFE6;
-  --bg-surface: #FFFFFF;
-  --bg-surface-secondary: #EFEBE0;
-  --bg-input: #FFFFFF;
-  --bg-modal: #FFFFFF;
-  --text-main: #242831;
-  --text-muted: #5F6675;
-  --text-dim: #848B9B;
-  --border-main: #E5E0D4;
-  --border-subtle: #ECE7DC;
-  --gold-primary: #B8860B;
-  --gold-bg: rgba(184, 134, 11, 0.12);
-  --gold-border: rgba(184, 134, 11, 0.35);
-  --gold-text: #946700;
-  --gold-hover: #A57805;
-  --scrollbar-track: #F2EEE4;
-  --scrollbar-thumb: #D3CCC0;
+  color-scheme: light;
+  --bg-app: #F5F2EA;
+  --bg-header: rgba(255, 253, 248, 0.94);
+  --bg-card: #FFFEFB;
+  --bg-card-hover: #F7F2E8;
+  --bg-surface: #FFFDF8;
+  --bg-surface-secondary: #EEE8DB;
+  --bg-input: #FFFEFB;
+  --bg-modal: #FFFEFB;
+  --text-main: #202925;
+  --text-muted: #5C6761;
+  --text-dim: #78817C;
+  --border-main: #DDD6C8;
+  --border-subtle: #EAE4D8;
+  --gold-primary: #916700;
+  --gold-bg: rgba(145, 103, 0, 0.10);
+  --gold-border: rgba(145, 103, 0, 0.32);
+  --gold-text: #795600;
+  --gold-hover: #7E5900;
+  --scrollbar-track: #EEE9DF;
+  --scrollbar-thumb: #C9C1B2;
 }
 
 html.dark, :root.dark {
+  color-scheme: dark;
   --bg-app: #0A0A0B;
   --bg-header: rgba(15, 17, 21, 0.96);
   --bg-card: #15171E;
@@ -61,7 +63,10 @@ html.dark, :root.dark {
 }
 
 .font-arabic {
-  font-family: 'Amiri', 'Traditional Arabic', serif;
+  font-family: 'Scheherazade New', 'Traditional Arabic', serif;
+  font-kerning: normal;
+  font-variant-ligatures: common-ligatures contextual;
+  letter-spacing: normal;
 }
 
 /* Custom Scrollbar */
@@ -83,79 +88,267 @@ html.dark, :root.dark {
   background: var(--gold-primary);
 }
 
-/* Theme Light Mode Overrides for hardcoded palette classes */
-:root:not(.dark) {
-  .bg-\[\#0A0A0B\], .bg-\[\#0a0a0b\] {
-    background-color: #F8F6F0 !important;
-  }
-  .bg-\[\#0F1115\], .bg-\[\#0f1115\] {
-    background-color: #FFFFFF !important;
-  }
-  .bg-\[\#0F1115\]\/95, .bg-\[\#0f1115\]\/95 {
-    background-color: rgba(248, 246, 240, 0.96) !important;
-  }
-  .bg-\[\#15171E\], .bg-\[\#15171e\] {
-    background-color: #FFFFFF !important;
-  }
-  .bg-\[\#1A1C23\], .bg-\[\#1a1c23\] {
-    background-color: #F3EFE6 !important;
-  }
-  .bg-\[\#1F2128\], .bg-\[\#1f2128\] {
-    background-color: #ECE7DC !important;
-  }
-  .bg-\[\#2A2D35\], .bg-\[\#2a2d35\] {
-    background-color: #E3DDD0 !important;
-  }
-  .text-\[\#E2E2E2\], .text-\[\#e2e2e2\] {
-    color: #242831 !important;
-  }
-  .text-\[\#8A8D9A\], .text-\[\#8a8d9a\] {
-    color: #5F6675 !important;
-  }
-  .text-\[\#6A6D7A\], .text-\[\#6a6d7a\] {
-    color: #808899 !important;
-  }
-  .border-\[\#2A2D35\], .border-\[\#2a2d35\] {
-    border-color: #E5E0D4 !important;
-  }
-  .border-\[\#1F2128\], .border-\[\#1f2128\] {
-    border-color: #ECE7DC !important;
-  }
-  .hover\:bg-\[\#1A1C23\]:hover, .hover\:bg-\[\#1a1c23\]:hover {
-    background-color: #EBE5D8 !important;
-  }
-  .hover\:bg-\[\#15171E\]:hover, .hover\:bg-\[\#15171e\]:hover {
-    background-color: #F5F1E8 !important;
-  }
-  .hover\:bg-\[\#2A2D35\]:hover, .hover\:bg-\[\#2a2d35\]:hover {
-    background-color: #E2DCCF !important;
-  }
-  .hover\:text-\[\#E2E2E2\]:hover, .hover\:text-\[\#e2e2e2\]:hover {
-    color: #181B21 !important;
-  }
-  .text-\[\#D4AF37\], .text-\[\#d4af37\] {
-    color: #9C6E05 !important;
-  }
-  .border-\[\#D4AF37\], .border-\[\#d4af37\] {
-    border-color: #B8860B !important;
-  }
-  .border-\[\#D4AF37\]\/40, .border-\[\#d4af37\]\/40 {
-    border-color: rgba(184, 134, 11, 0.4) !important;
-  }
-  .border-\[\#D4AF37\]\/50, .border-\[\#d4af37\]\/50 {
-    border-color: rgba(184, 134, 11, 0.5) !important;
-  }
-  .bg-\[\#D4AF37\], .bg-\[\#d4af37\] {
-    background-color: #B8860B !important;
-    color: #FFFFFF !important;
-  }
-  .bg-\[\#D4AF37\]\/10, .bg-\[\#d4af37\]\/10 {
-    background-color: rgba(184, 134, 11, 0.10) !important;
-  }
-  .bg-\[\#D4AF37\]\/15, .bg-\[\#d4af37\]\/15 {
-    background-color: rgba(184, 134, 11, 0.14) !important;
-  }
-  .bg-\[\#D4AF37\]\/20, .bg-\[\#d4af37\]\/20 {
-    background-color: rgba(184, 134, 11, 0.18) !important;
-  }
+/* Map the original dark-first component palette to the light theme. */
+:root:not(.dark) .bg-\[\#0A0A0B\],
+:root:not(.dark) .bg-\[\#0a0a0b\] {
+  background-color: var(--bg-app) !important;
+}
+
+:root:not(.dark) .bg-\[\#0F1115\],
+:root:not(.dark) .bg-\[\#0f1115\] {
+  background-color: var(--bg-surface) !important;
+}
+
+:root:not(.dark) .bg-\[\#0F1115\]\/95,
+:root:not(.dark) .bg-\[\#0f1115\]\/95 {
+  background-color: var(--bg-header) !important;
+}
+
+:root:not(.dark) .bg-\[\#15171E\],
+:root:not(.dark) .bg-\[\#15171e\] {
+  background-color: var(--bg-card) !important;
+}
+
+:root:not(.dark) .bg-\[\#1A1C23\],
+:root:not(.dark) .bg-\[\#1a1c23\] {
+  background-color: var(--bg-card-hover) !important;
+}
+
+:root:not(.dark) .bg-\[\#1F2128\],
+:root:not(.dark) .bg-\[\#1f2128\],
+:root:not(.dark) .bg-\[\#2A2D35\],
+:root:not(.dark) .bg-\[\#2a2d35\] {
+  background-color: var(--bg-surface-secondary) !important;
+}
+
+:root:not(.dark) .text-\[\#E2E2E2\],
+:root:not(.dark) .text-\[\#e2e2e2\] {
+  color: var(--text-main) !important;
+}
+
+:root:not(.dark) .text-\[\#8A8D9A\],
+:root:not(.dark) .text-\[\#8a8d9a\] {
+  color: var(--text-muted) !important;
+}
+
+:root:not(.dark) .text-\[\#6A6D7A\],
+:root:not(.dark) .text-\[\#6a6d7a\] {
+  color: var(--text-dim) !important;
+}
+
+:root:not(.dark) .placeholder-\[\#6A6D7A\]::placeholder,
+:root:not(.dark) .placeholder-\[\#6a6d7a\]::placeholder {
+  color: var(--text-dim) !important;
+}
+
+:root:not(.dark) .border-\[\#2A2D35\],
+:root:not(.dark) .border-\[\#2a2d35\] {
+  border-color: var(--border-main) !important;
+}
+
+:root:not(.dark) .border-\[\#1F2128\],
+:root:not(.dark) .border-\[\#1f2128\] {
+  border-color: var(--border-subtle) !important;
+}
+
+:root:not(.dark) .hover\:bg-\[\#1A1C23\]:hover,
+:root:not(.dark) .hover\:bg-\[\#1a1c23\]:hover,
+:root:not(.dark) .hover\:bg-\[\#15171E\]:hover,
+:root:not(.dark) .hover\:bg-\[\#15171e\]:hover {
+  background-color: var(--bg-card-hover) !important;
+}
+
+:root:not(.dark) .hover\:bg-\[\#2A2D35\]:hover,
+:root:not(.dark) .hover\:bg-\[\#2a2d35\]:hover {
+  background-color: var(--bg-surface-secondary) !important;
+}
+
+:root:not(.dark) .hover\:text-\[\#E2E2E2\]:hover,
+:root:not(.dark) .hover\:text-\[\#e2e2e2\]:hover {
+  color: var(--text-main) !important;
+}
+
+:root:not(.dark) .text-\[\#D4AF37\],
+:root:not(.dark) .text-\[\#d4af37\] {
+  color: var(--gold-text) !important;
+}
+
+:root:not(.dark) .border-\[\#D4AF37\],
+:root:not(.dark) .border-\[\#d4af37\] {
+  border-color: var(--gold-primary) !important;
+}
+
+:root:not(.dark) .border-\[\#D4AF37\]\/40,
+:root:not(.dark) .border-\[\#d4af37\]\/40,
+:root:not(.dark) .border-\[\#D4AF37\]\/50,
+:root:not(.dark) .border-\[\#d4af37\]\/50 {
+  border-color: var(--gold-border) !important;
+}
+
+:root:not(.dark) .bg-\[\#D4AF37\],
+:root:not(.dark) .bg-\[\#d4af37\] {
+  background-color: var(--gold-primary) !important;
+  color: #FFFFFF !important;
+}
+
+:root:not(.dark) .bg-\[\#D4AF37\]\/10,
+:root:not(.dark) .bg-\[\#d4af37\]\/10,
+:root:not(.dark) .bg-\[\#D4AF37\]\/15,
+:root:not(.dark) .bg-\[\#d4af37\]\/15,
+:root:not(.dark) .bg-\[\#D4AF37\]\/20,
+:root:not(.dark) .bg-\[\#d4af37\]\/20 {
+  background-color: var(--gold-bg) !important;
+}
+
+/* Light surfaces need definition, not the heavy glow used by dark mode. */
+:root:not(.dark) .shadow-md,
+:root:not(.dark) .shadow-lg,
+:root:not(.dark) .shadow-xl,
+:root:not(.dark) .shadow-2xl {
+  --tw-shadow-color: rgba(53, 45, 29, 0.10) !important;
+}
+
+:root:not(.dark) header.shadow-xl {
+  box-shadow: 0 1px 0 rgba(80, 66, 36, 0.08), 0 8px 24px rgba(80, 66, 36, 0.07) !important;
+}
+
+/* Keep semantic feedback readable on a bright background. */
+:root:not(.dark) .bg-emerald-950\/30,
+:root:not(.dark) .bg-emerald-950\/40,
+:root:not(.dark) .hover\:bg-emerald-900\/40:hover {
+  background-color: rgba(5, 150, 105, 0.09) !important;
+}
+
+:root:not(.dark) .text-emerald-300,
+:root:not(.dark) .text-emerald-400 {
+  color: #047857 !important;
+}
+
+:root:not(.dark) .border-emerald-700\/50,
+:root:not(.dark) .border-emerald-800\/40,
+:root:not(.dark) .border-emerald-800\/50 {
+  border-color: rgba(4, 120, 87, 0.28) !important;
+}
+
+:root:not(.dark) .bg-red-950\/20,
+:root:not(.dark) .bg-red-950\/30 {
+  background-color: rgba(220, 38, 38, 0.07) !important;
+}
+
+:root:not(.dark) .text-red-300,
+:root:not(.dark) .text-red-400 {
+  color: #B91C1C !important;
+}
+
+:root:not(.dark) .bg-amber-950\/30 {
+  background-color: rgba(217, 119, 6, 0.09) !important;
+}
+
+:root:not(.dark) .text-amber-100\/70,
+:root:not(.dark) .text-amber-200,
+:root:not(.dark) .text-amber-300,
+:root:not(.dark) .text-amber-400 {
+  color: #92400E !important;
+}
+
+::selection {
+  background-color: var(--gold-bg);
+  color: var(--text-main);
+}
+
+/* Mushaf uses a paper-like surface in light mode and a low-glare page at night. */
+.mushaf-page {
+  background-color: #F8F1DD;
+  border-color: rgba(184, 150, 45, 0.40);
+}
+
+.mushaf-header {
+  background-color: #EDE1BE;
+  border-color: rgba(184, 150, 45, 0.30);
+}
+
+.mushaf-ornament {
+  color: #8A6A16;
+}
+
+.mushaf-ornament-line {
+  background-color: rgba(184, 150, 45, 0.40);
+}
+
+.mushaf-title {
+  color: #372B18;
+}
+
+.mushaf-meta {
+  color: #7A632B;
+}
+
+.mushaf-hint {
+  color: #8B7650;
+}
+
+.mushaf-frame {
+  border-color: rgba(184, 150, 45, 0.20);
+}
+
+.mushaf-bismillah {
+  color: #4A381D;
+}
+
+.mushaf-text {
+  color: #292016;
+}
+
+.mushaf-verse-number {
+  color: #9A741B;
+}
+
+.dark .mushaf-page {
+  background-color: #101512;
+  border-color: rgba(212, 175, 55, 0.38);
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.42), inset 0 0 0 1px rgba(255, 255, 255, 0.015);
+}
+
+.dark .mushaf-header {
+  background: linear-gradient(180deg, #1A211C 0%, #151B17 100%);
+  border-color: rgba(212, 175, 55, 0.24);
+}
+
+.dark .mushaf-ornament {
+  color: #C8A94D;
+}
+
+.dark .mushaf-ornament-line {
+  background: linear-gradient(90deg, transparent, rgba(212, 175, 55, 0.55), transparent);
+}
+
+.dark .mushaf-title {
+  color: #F0E5C6;
+  text-shadow: 0 1px 18px rgba(212, 175, 55, 0.10);
+}
+
+.dark .mushaf-meta {
+  color: #D0B866;
+}
+
+.dark .mushaf-hint {
+  color: #918D80;
+}
+
+.dark .mushaf-frame {
+  border-color: rgba(212, 175, 55, 0.16);
+  box-shadow: inset 0 0 32px rgba(0, 0, 0, 0.18);
+}
+
+.dark .mushaf-bismillah {
+  color: #E1D2A7;
+}
+
+.dark .mushaf-text {
+  color: #E9E3D4;
+  text-shadow: 0 1px 1px rgba(0, 0, 0, 0.45);
+}
+
+.dark .mushaf-verse-number {
+  color: #D8B957;
 }

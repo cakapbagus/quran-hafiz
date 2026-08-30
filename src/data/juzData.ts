@@ -423,3 +423,26 @@ export function getSurahsForJuzRange(startJuz: number, endJuz: number): number[]
 export function getJuzInfo(juzNumber: number): JuzInfo | undefined {
   return ALL_JUZ_DATA.find((j) => j.juzNumber === juzNumber);
 }
+
+export function isVerseInJuzRange(
+  surahNumber: number,
+  verseNumber: number,
+  startJuz: number,
+  endJuz: number
+): boolean {
+  const minJuz = Math.max(1, Math.min(startJuz, endJuz));
+  const maxJuz = Math.min(30, Math.max(startJuz, endJuz));
+  const start = getJuzInfo(minJuz);
+  const end = getJuzInfo(maxJuz);
+
+  if (!start || !end) return false;
+
+  const afterStart =
+    surahNumber > start.startSurahNumber ||
+    (surahNumber === start.startSurahNumber && verseNumber >= start.startVerseNumber);
+  const beforeEnd =
+    surahNumber < end.endSurahNumber ||
+    (surahNumber === end.endSurahNumber && verseNumber <= end.endVerseNumber);
+
+  return afterStart && beforeEnd;
+}
