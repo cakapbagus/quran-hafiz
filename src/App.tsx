@@ -320,6 +320,26 @@ export default function App() {
     setPlaybackState((prev) => ({ ...prev, isPlaying: false }));
   };
 
+  const handleCloseAudioPlayer = () => {
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current.removeAttribute('src');
+      audioRef.current.load();
+    }
+    setAudioProgress(0);
+    setCurrentTimeStr('00:00');
+    setDurationTimeStr('00:00');
+    setPlaybackState((prev) => ({
+      ...prev,
+      isPlaying: false,
+      surahNumber: null,
+      verseNumber: null,
+      repeatCountCurrent: 1,
+      rangeStartVerse: null,
+      rangeEndVerse: null
+    }));
+  };
+
   const handlePlayPauseToggle = () => {
     if (!audioRef.current) return;
     if (playbackState.isPlaying) {
@@ -625,6 +645,7 @@ export default function App() {
         onSelectQari={handleSelectQari}
         onSetSpeed={handleSetSpeed}
         onSetLoopTarget={handleSetLoopTarget}
+        onClose={handleCloseAudioPlayer}
         audioProgress={audioProgress}
         currentTimeStr={currentTimeStr}
         durationTimeStr={durationTimeStr}

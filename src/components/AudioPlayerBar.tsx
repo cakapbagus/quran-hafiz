@@ -26,6 +26,7 @@ interface AudioPlayerBarProps {
   onSelectQari: (qariId: string) => void;
   onSetSpeed: (speed: number) => void;
   onSetLoopTarget: (count: number) => void;
+  onClose: () => void;
   audioProgress: number; // 0 to 100
   currentTimeStr: string;
   durationTimeStr: string;
@@ -42,6 +43,7 @@ export const AudioPlayerBar: React.FC<AudioPlayerBarProps> = ({
   onSelectQari,
   onSetSpeed,
   onSetLoopTarget,
+  onClose,
   audioProgress,
   currentTimeStr,
   durationTimeStr,
@@ -153,6 +155,15 @@ export const AudioPlayerBar: React.FC<AudioPlayerBarProps> = ({
           >
             <Gauge className="w-3.5 h-3.5 inline mr-1 text-[#D4AF37]" />
             <span>{playbackState.playbackSpeed}x</span>
+          </button>
+
+          <button
+            onClick={onClose}
+            className="p-2 rounded-xl text-[#8A8D9A] hover:text-[#E2E2E2] hover:bg-[#1A1C23] transition cursor-pointer shrink-0"
+            aria-label="Tutup pemutar audio"
+            title="Tutup pemutar audio"
+          >
+            <X className="w-4 h-4" />
           </button>
         </div>
       </div>
