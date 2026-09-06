@@ -18,6 +18,14 @@ const keys = {
 describe('settings storage', () => {
   beforeEach(() => localStorage.clear());
 
+  it('defaults to system and migrates legacy themes', () => {
+    expect(getStoredSettings().theme).toBe('system');
+    localStorage.setItem(keys.settings, JSON.stringify({ theme: 'emerald_dark' }));
+    expect(getStoredSettings().theme).toBe('dark');
+    localStorage.setItem(keys.settings, JSON.stringify({ theme: 'invalid' }));
+    expect(getStoredSettings().theme).toBe('system');
+  });
+
   it('uses separate display defaults for reading and memorization', () => {
     expect(getStoredSettings()).toMatchObject({
       readDisplayMode: 'verse',

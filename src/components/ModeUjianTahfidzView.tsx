@@ -1,3 +1,4 @@
+import { confirmAction } from './AppDialog';
 import React, { useState, useEffect, useRef } from 'react';
 import {
   GraduationCap,
@@ -329,7 +330,7 @@ export const ModeUjianTahfidzView: React.FC<ModeUjianTahfidzViewProps> = ({
                 ].map((item) => (
                   <button
                     key={item.id}
-                    onClick={() => {
+                    onClick={async () => {
                       if (item.id === 'juz_range') {
                         setConfig((prev) => ({
                           ...prev,
@@ -772,8 +773,8 @@ export const ModeUjianTahfidzView: React.FC<ModeUjianTahfidzViewProps> = ({
             )}
 
             <button
-              onClick={() => {
-                if (confirm('Batalkan ujian dan kembali ke menu setup?')) {
+              onClick={async () => {
+                if (await confirmAction('Batalkan ujian dan kembali ke menu setup?')) {
                   setViewState('setup');
                 }
               }}

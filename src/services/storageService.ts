@@ -12,7 +12,7 @@ export const DEFAULT_SETTINGS: UserSettings = {
   showLatin: true,
   enableColoredTajwid: true,
   selectedQariId: 'mishary',
-  theme: 'dark',
+  theme: 'system',
   autoPlayNextVerse: true,
   defaultRepeatCount: 3,
   maskModeDefault: 'none',
@@ -24,7 +24,10 @@ export const DEFAULT_SETTINGS: UserSettings = {
 export function getStoredSettings(): UserSettings {
   try {
     const data = localStorage.getItem(SETTINGS_KEY);
-    return data ? { ...DEFAULT_SETTINGS, ...JSON.parse(data) } : DEFAULT_SETTINGS;
+    const settings = data ? { ...DEFAULT_SETTINGS, ...JSON.parse(data) } : { ...DEFAULT_SETTINGS };
+        if (settings.theme === 'emerald_dark') settings.theme = 'dark';
+        if (!['system', 'dark', 'light'].includes(settings.theme)) settings.theme = 'system';
+        return settings;
   } catch (e) {
     return DEFAULT_SETTINGS;
   }

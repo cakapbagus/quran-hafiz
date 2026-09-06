@@ -1,3 +1,4 @@
+import { confirmAction } from './components/AppDialog';
 import React, { useState, useEffect, useRef } from 'react';
 import {
   SurahDetail,
@@ -53,6 +54,7 @@ import { VoiceRecorderModal } from './components/VoiceRecorderModal';
 import { VerseNoteModal } from './components/VerseNoteModal';
 import { AudioPlayerBar } from './components/AudioPlayerBar';
 import { HalaqahPanel } from './components/HalaqahPanel';
+import { WelcomeLoginModal } from './components/GoogleLogin';
 import { saveVerse, watchRecords, type Records } from './services/halaqahService';
 
 export default function App() {
@@ -181,15 +183,18 @@ export default function App() {
   settingsRef.current = settings;
   surahDetailRef.current = currentSurahDetail;
 
-  // Apply Dark/Light theme class to html element
   useEffect(() => {
-    if (settings.theme === 'dark') {
-      document.documentElement.classList.add('dark');
-    } else {
-      document.documentElement.classList.remove('dark');
-    }
-    saveStoredSettings(settings);
-  }, [settings]);
+    const media = window.matchMedia('(prefers-color-scheme: dark)');
+    const applyTheme = () => {
+      const dark = settings.theme === 'dark' || (settings.theme === 'system' && media.matches);
+      document.documentElement.classList.toggle('dark', dark);
+      document.documentElement.style.colorScheme = dark ? 'dark' : 'light';
+    };
+    applyTheme();
+    media.addEventListener('change', applyTheme);
+    return () => media.removeEventListener('change', applyTheme);
+  }, [settings.theme]);
+  useEffect(() => { saveStoredSettings(settings); }, [settings]);
 
   // Debounced automatic sync whenever Google Drive is connected.
   useEffect(() => {
@@ -608,7 +613,7 @@ export default function App() {
     const nextRecords = data.hafalanRecords ?? hafalanRecords;
     const nextLastRead = data.lastRead !== undefined ? data.lastRead : lastRead;
     restoreStoredDataAtomically(mergedSettings, nextBookmarks, nextRecords, nextLastRead);
-    setSettings(mergedSettings);
+    setSettings(getStoredSettings());
     setBookmarks(nextBookmarks);
     setHafalanRecords(nextRecords);
     setLastRead(nextLastRead);
@@ -643,6 +648,7 @@ export default function App() {
         bookmarksCount={bookmarks.length}
       />
 
+      <WelcomeLoginModal />
       <div hidden={!teacherMode && !learningRoomOpen}>
         <HalaqahPanel teacherMode={teacherMode} />
         {!teacherMode && <div className="max-w-7xl mx-auto px-4 pb-4"><button type="button" className="border rounded-xl px-4 py-2 hover:bg-emerald-500/10" onClick={() => setLearningRoomOpen(false)}>Kembali ke Al-Quran</button></div>}
@@ -844,8 +850,8 @@ export default function App() {
               .then(() => window.location.reload())
               .catch((error) => console.warn('Failed to clear Quran cache:', error));
           }}
-          onResetProgress={() => {
-            if (window.confirm('Apakah Anda yakin ingin mereset seluruh progres hafalan? Tindakan ini akan mengosongkan status hafalan lokal.')) {
+          onResetProgress={async () => {
+            if (await confirmAction('Apakah Anda yakin ingin mereset seluruh progres hafalan? Tindakan ini akan mengosongkan status hafalan lokal.')) {
               clearStoredHafalanRecords();
               setHafalanRecords({});
               setIsSettingsOpen(false);

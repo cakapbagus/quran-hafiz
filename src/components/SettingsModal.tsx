@@ -2,7 +2,7 @@ import React from 'react';
 import { useDialogAccessibility } from '../hooks/useDialogAccessibility';
 import { UserSettings } from '../types';
 import { QARIS } from '../data/qaris';
-import { X, Sliders, Type, Volume2, Moon, Sun, Trash2, Cloud, Sparkles, BookOpen, Rows3, RotateCcw } from 'lucide-react';
+import { X, Sliders, Type, Volume2, Monitor, Moon, Sun, Trash2, Cloud, Sparkles, BookOpen, Rows3, RotateCcw } from 'lucide-react';
 
 interface SettingsModalProps {
   settings: UserSettings;
@@ -74,8 +74,10 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             <Sun className="w-4 h-4 text-[#D4AF37]" />
             <span>Tema Tampilan Aplikasi</span>
           </h3>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <button type="button" aria-pressed={settings.theme === 'system'} onClick={() => onUpdateSettings({ theme: 'system' })} className={`p-3 rounded-2xl border flex items-center justify-center gap-2 text-xs font-bold transition cursor-pointer ${settings.theme === 'system' ? 'bg-[#1A1C23] border-[#D4AF37] text-[#D4AF37] ring-1 ring-[#D4AF37]/50' : 'bg-[#0F1115] border-[#2A2D35] text-[#8A8D9A] hover:text-[#E2E2E2]'}`}><Monitor className="w-4 h-4" />System (Default)</button>
             <button
+              aria-pressed={settings.theme === 'dark'}
               onClick={() => onUpdateSettings({ theme: 'dark' })}
               className={`p-3 rounded-2xl border flex items-center justify-between text-xs font-bold transition cursor-pointer ${
                 settings.theme === 'dark'
@@ -85,13 +87,14 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             >
               <span className="flex items-center gap-2">
                 <Moon className="w-4 h-4" />
-                <span>Mode Gelap (Dark)</span>
+                <span>Dark</span>
               </span>
               {settings.theme === 'dark' && <span className="w-2 h-2 rounded-full bg-[#D4AF37]" />}
             </button>
 
             <button
-              onClick={() => onUpdateSettings({ theme: 'light' })}
+              aria-pressed={settings.theme === 'light'}
+                            onClick={() => onUpdateSettings({ theme: 'light' })}
               className={`p-3 rounded-2xl border flex items-center justify-between text-xs font-bold transition cursor-pointer ${
                 settings.theme === 'light'
                   ? 'bg-[#1A1C23] border-[#D4AF37] text-[#D4AF37] ring-1 ring-[#D4AF37]/50'
@@ -100,7 +103,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             >
               <span className="flex items-center gap-2">
                 <Sun className="w-4 h-4" />
-                <span>Mode Terang (Light)</span>
+                <span>Light</span>
               </span>
               {settings.theme === 'light' && <span className="w-2 h-2 rounded-full bg-[#D4AF37]" />}
             </button>

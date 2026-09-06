@@ -95,7 +95,7 @@ export interface UserSettings {
   showLatin: boolean;
   enableColoredTajwid: boolean; // Tajwid berwarna pada teks arab
   selectedQariId: string;
-  theme: 'light' | 'dark' | 'emerald_dark';
+  theme: 'system' | 'dark' | 'light';
   autoPlayNextVerse: boolean;
   defaultRepeatCount: number;
   maskModeDefault: 'none' | 'blur_all' | 'first_letters' | 'random_words';

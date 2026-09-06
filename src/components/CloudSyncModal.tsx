@@ -1,3 +1,4 @@
+import { confirmAction } from './AppDialog';
 import React, { useState, useEffect } from 'react';
 import { useDialogAccessibility } from '../hooks/useDialogAccessibility';
 import {
@@ -278,7 +279,7 @@ export const CloudSyncModal: React.FC<CloudSyncModalProps> = ({
       return;
     }
 
-    if (!window.confirm('Pemulihan akan menimpa pengaturan, bookmark, progres hafalan, dan posisi baca lokal. Lanjutkan?')) return;
+    if (!await confirmAction('Pemulihan akan menimpa pengaturan, bookmark, progres hafalan, dan posisi baca lokal. Lanjutkan?')) return;
 
     setIsSyncingDownload(true);
     setStatusMessage(null);
@@ -317,7 +318,7 @@ export const CloudSyncModal: React.FC<CloudSyncModalProps> = ({
   const handleDeleteAccount = async () => {
     if (!token) return;
 
-    const confirmed = window.confirm(
+    const confirmed = await confirmAction(
       'PERINGATAN: Tindakan ini akan menghapus akun dan seluruh data Anda di Firebase secara permanen. Data lokal di perangkat ini tidak akan dihapus. Jika ingin menautkan kembali nantinya, Anda harus login Google kembali. Lanjutkan?'
     );
     if (!confirmed) return;
@@ -628,7 +629,7 @@ export const CloudSyncModal: React.FC<CloudSyncModalProps> = ({
                 type="button"
                 disabled={isImportingLegacy || !hasLegacyHafalan}
                 onClick={async () => {
-                  if (!window.confirm('Impor hafalan lokal lama ke akun ini? Hanya ayat yang belum ada di cloud akan ditambahkan.')) return;
+                  if (!await confirmAction('Impor hafalan lokal lama ke akun ini? Hanya ayat yang belum ada di cloud akan ditambahkan.')) return;
                   setIsImportingLegacy(true);
                   try {
                     await onImportLegacyHafalan();

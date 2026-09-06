@@ -212,6 +212,19 @@ export async function renameStudent(s: Student, name: string) {
 export async function archiveManual(id: string) { const { db, uid } = identity(); await updateDoc(doc(db, 'teachers', uid, 'manual_students', id), { archived: true }); }
 function verses(target: Target) { const { db } = services(); return target.manualId ? collection(db, 'teachers', target.uid, 'manual_students', target.manualId, 'verses') : collection(db, 'learner_records', target.uid, 'verses'); }
 export function watchRecords(target: Target, next: (r: Records) => void, error: (e: Error) => void) { return onSnapshot(verses(target), s => next(Object.fromEntries(s.docs.map(d => [d.id, d.data() as SharedVerse]))), error); }
+export async function importLegacyHafalan(records: Record<string, HafalanVerseRecord>, expectedUid: string) {
+  for (const record of Object.values(records)) {
+    validateVerse(record);
+    const { uid, db } = identity();
+    if (uid !== expectedUid) throw new Error('Akun berubah; impor dihentikan.');
+    const ref = doc(verses({ uid }), `${record.surahNumber}_${record.verseNumber}`);
+    await runTransaction(db, async tx => {
+      if ((await tx.get(ref)).exists()) return;
+      tx.set(ref, { surahNumber: record.surahNumber, verseNumber: record.verseNumber, status: record.status, repeatCount: record.repeatCount, notes: record.notes || '', lastReviewedAt: record.lastReviewedAt || new Date().toISOString(), revision: 1, updatedBy: uid, updatedAt: serverTimestamp() });
+    });
+  }
+}
+
 export function validateVerse(record: HafalanVerseRecord) {
   const surah = ALL_SURAHS.find(s => s.nomor === record.surahNumber);
   if (!surah || !Number.isInteger(record.verseNumber) || record.verseNumber < 1 || record.verseNumber > surah.jumlahAyat || !['not_started', 'in_progress', 'review_needed', 'memorized'].includes(record.status) || !Number.isInteger(record.repeatCount) || record.repeatCount < 0 || record.repeatCount > 100000 || (record.notes?.length || 0) > 2000) throw new Error('Data hafalan tidak valid.');

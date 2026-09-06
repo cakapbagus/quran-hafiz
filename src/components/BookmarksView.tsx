@@ -1,3 +1,4 @@
+import { confirmAction } from './AppDialog';
 import React, { useState } from 'react';
 import { Bookmark } from '../types';
 import { Bookmark as BookmarkIcon, Trash2, BookOpen, Brain, CheckSquare, Square, Pencil, Save, X, Search } from 'lucide-react';
@@ -57,10 +58,10 @@ export const BookmarksView: React.FC<BookmarksViewProps> = ({
     }
   };
 
-  const handleDeleteSelected = () => {
+  const handleDeleteSelected = async () => {
     if (selectedKeys.size === 0) return;
     const count = selectedKeys.size;
-    if (!window.confirm(`Hapus ${count} bookmark yang dipilih?`)) return;
+    if (!await confirmAction(`Hapus ${count} bookmark yang dipilih?`)) return;
 
     const itemsToDelete = filteredBookmarks
       .filter((b) => selectedKeys.has(getBookmarkKey(b.surahNumber, b.verseNumber)))
@@ -212,7 +213,10 @@ export const BookmarksView: React.FC<BookmarksViewProps> = ({
                     </button>
 
                     <button
-                      onClick={() => onRemoveBookmark(bm.surahNumber, bm.verseNumber)}
+                      onClick={async () => {
+                                              if (!await confirmAction(`Hapus bookmark ${bm.surahName} ayat ${bm.verseNumber}?`)) return;
+                                              onRemoveBookmark(bm.surahNumber, bm.verseNumber);
+                                            }}
                       className="p-1.5 rounded-xl text-[#8A8D9A] hover:text-red-400 hover:bg-[#0F1115] transition cursor-pointer"
                       aria-label="Hapus bookmark"
                     >

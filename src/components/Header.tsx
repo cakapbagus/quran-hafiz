@@ -4,6 +4,7 @@ import {
   Brain,
   Bookmark,
   BarChart3,
+  Monitor,
   Moon,
   Sun,
   Search,
@@ -62,7 +63,7 @@ export const Header: React.FC<HeaderProps> = ({
   }, []);
 
   const toggleTheme = () => {
-    const nextTheme = settings.theme === 'light' ? 'dark' : 'light';
+    const nextTheme = settings.theme === 'system' ? 'dark' : settings.theme === 'dark' ? 'light' : 'system';
     updateSettings({ theme: nextTheme });
   };
 
@@ -145,9 +146,10 @@ export const Header: React.FC<HeaderProps> = ({
             <button
               onClick={toggleTheme}
               className="p-2 rounded-xl bg-[#1A1C23] text-[#D4AF37] hover:bg-[#2A2D35] border border-[#2A2D35] transition cursor-pointer"
-              aria-label="Ganti tema"
+              aria-label={`Ganti tema (saat ini: ${settings.theme})`}
+                            title={`Tema: ${settings.theme} · Klik untuk mengganti`}
             >
-              {settings.theme === 'light' ? <Moon className="w-4 h-4" /> : <Sun className="w-4 h-4" />}
+              {settings.theme === 'system' ? <Monitor className="w-4 h-4" /> : settings.theme === 'dark' ? <Moon className="w-4 h-4" /> : <Sun className="w-4 h-4" />}
             </button>
 
             {/* Settings button */}
