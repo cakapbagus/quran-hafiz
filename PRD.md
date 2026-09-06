@@ -42,7 +42,7 @@ Daftar siswa terhubung melalui query linkedTeacherUid. Tidak menyimpan seluruh h
 Service TypeScript menyediakan aktivasi guru, lookup kode, perubahan relasi transaksi, subscription daftar/progres, CRUD manual dan update ayat dengan pemeriksaan versi. Firebase Rules memvalidasi pemilik, guru aktif, field yang diizinkan, identitas immutable dan revision. Guru tidak dapat mengubah relasi guru siswa atau backup pribadi. Login bukan verifikasi profesi guru.
 
 ## Keamanan, privasi dan error
-Kode undangan bukan password; tidak memublikasikan daftar kode. Konfirmasi menampilkan nama guru dan cakupan akses. Penolakan izin, offline, konflik, kode bentrok/tidak ditemukan dan kegagalan penyimpanan harus terlihat. Data yang sudah diunduh guru tidak dapat ditarik kembali secara absolut. Jangan cache data siswa di perangkat bersama tanpa kebijakan pembersihan. Firestore memakai kuota/biaya Google. Pembatasan brute force server perlu disiapkan sebelum penggunaan publik berskala besar.
+Kode undangan bukan password; tidak memublikasikan daftar kode. Konfirmasi menampilkan nama guru dan cakupan akses. Penolakan izin, offline, konflik, kode bentrok/tidak ditemukan dan kegagalan penyimpanan harus terlihat. Data yang sudah diunduh guru tidak dapat ditarik kembali secara absolut. Jangan cache data siswa di perangkat bersama tanpa kebijakan pembersihan. Penghapusan data di cloud (unlink & delete) menghapus seluruh cadangan `users/{uid}/backups/current`, profil halaqah `halaqah_profiles/{uid}`, kode guru `teacher_codes/{code}`, rekaman hafalan `learner_records/{uid}/verses`, serta siswa manual `teachers/{uid}/manual_students` dan ayat-ayatnya secara permanen dari Firestore sebelum memutuskan sesi. Firestore memakai kuota/biaya Google. Pembatasan brute force server perlu disiapkan sebelum penggunaan publik berskala besar.
 
 ## Kebutuhan nonfungsional dan migrasi
 Tidak menghapus backup/data lokal lama. Impor hafalan lama harus eksplisit dan hanya ke akun yang dipilih. Antrean offline dipisahkan UID; konflik tidak diselesaikan berdasarkan jam perangkat. Nama maksimal 100 karakter, catatan maksimal 2000. Tampilan responsif, label input, loading/empty/error state.
@@ -62,7 +62,7 @@ Tidak menghapus backup/data lokal lama. Impor hafalan lama harus eksplisit dan h
 - Semua checkbox menunjukkan verifikasi aktual, bukan sekadar rancangan.
 
 ## Status implementasi
-Tersedia: service kode guru/relasi, switch mode, daftar siswa linked/manual, arsip manual, edit nama, setoran per ayat, subscription realtime, antrean edit ayat offline dengan revision, dan impor eksplisit hafalan lokal yang belum ada di cloud.
+Tersedia: service kode guru/relasi, switch mode, daftar siswa linked/manual, arsip manual, edit nama, setoran per ayat, subscription realtime, antrean edit ayat offline dengan revision, impor eksplisit hafalan lokal yang belum ada di cloud, serta fitur unlink & delete yang menghapus seluruh data cloud pengguna dari Firestore secara bersih.
 
 Validasi lokal: `npm run lint`, `npm run test` (45 test), dan `npm run build` lulus. Build memberi peringatan chunk >500 KB.
 

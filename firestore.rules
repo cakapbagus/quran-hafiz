@@ -26,6 +26,7 @@ service cloud.firestore {
       allow update: if signed() && resource.data.teacherUid == request.auth.uid
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['teacherName'])
         && request.resource.data.teacherName is string && request.resource.data.teacherName.size() > 0 && request.resource.data.teacherName.size() <= 100;
+      allow delete: if signed() && (resource == null || resource.data.teacherUid == request.auth.uid);
     }
     match /halaqah_profiles/{uid} {
       allow read: if owner(uid) || (signed() && resource.data.linkedTeacherUid == request.auth.uid);
@@ -33,6 +34,7 @@ service cloud.firestore {
       allow update: if profileValid(uid) && ((owner(uid)
         && (resource.data.teacherCode == '' || request.resource.data.teacherCode == resource.data.teacherCode))
         || (teacher(uid) && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name'])));
+      allow delete: if owner(uid);
     }
     function verseValid(key) {
       let d = request.resource.data;
@@ -49,18 +51,21 @@ service cloud.firestore {
       allow read: if owner(uid) || teacher(uid);
       allow create: if (owner(uid) || teacher(uid)) && verseValid(key) && request.resource.data.revision == 1;
       allow update: if (owner(uid) || teacher(uid)) && verseValid(key) && request.resource.data.revision == resource.data.revision + 1;
+      allow delete: if owner(uid);
     }
     match /teachers/{uid}/manual_students/{id} {
       allow read: if owner(uid);
       allow create, update: if owner(uid) && request.resource.data.keys().hasOnly(['name', 'archived'])
         && request.resource.data.name is string && request.resource.data.name.size() > 0 && request.resource.data.name.size() <= 100
         && request.resource.data.archived is bool;
+      allow delete: if owner(uid);
       match /verses/{key} {
         allow read: if owner(uid);
         allow create: if owner(uid) && verseValid(key) && request.resource.data.revision == 1
           && get(/databases/$(database)/documents/teachers/$(uid)/manual_students/$(id)).data.archived == false;
         allow update: if owner(uid) && verseValid(key) && request.resource.data.revision == resource.data.revision + 1
           && get(/databases/$(database)/documents/teachers/$(uid)/manual_students/$(id)).data.archived == false;
+        allow delete: if owner(uid);
       }
     }
     match /users/{uid}/backups/current {

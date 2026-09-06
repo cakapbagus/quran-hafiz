@@ -1,6 +1,17 @@
 import { initializeApp, getApps } from 'firebase/app';
 import { getAuth, GoogleAuthProvider, onAuthStateChanged, signInWithPopup, signOut, type Auth } from 'firebase/auth';
-import { getFirestore, doc, getDocFromServer, deleteDoc, runTransaction, Timestamp } from 'firebase/firestore';
+import {
+  getFirestore,
+  doc,
+  collection,
+  getDocFromServer,
+  getDocs,
+  writeBatch,
+  deleteDoc,
+  runTransaction,
+  Timestamp,
+  type DocumentReference
+} from 'firebase/firestore';
 import { CloudBackupPayload, GoogleUserProfile, Bookmark, HafalanVerseRecord, UserSettings, LastRead } from '../types';
 
 const MAX_BACKUP_BYTES = 900000;
@@ -99,14 +110,79 @@ export async function downloadCloudBackup(uid: string, _fileId?: string): Promis
   return payload;
 }
 
-export async function deleteCloudBackup(uid: string): Promise<void> {
-  const ref = backupRef(uid);
-  await deleteDoc(ref);
+export async function deleteAllUserCloudData(uid: string): Promise<void> {
+  const { auth, db } = services();
+  if (!uid || auth.currentUser?.uid !== uid) throw new Error('Sesi Firebase berubah. Silakan login kembali.');
+
+  const refsToDelete: DocumentReference[] = [];
+
+  // 1. users/{uid}/backups/current
+  refsToDelete.push(backupRef(uid));
+
+  // 2. learner_records/{uid}/verses/*
+  try {
+    const learnerVersesSnap = await getDocs(collection(db, 'learner_records', uid, 'verses'));
+    learnerVersesSnap.forEach((d) => refsToDelete.push(d.ref));
+  } catch (err) {
+    console.warn('Gagal membaca learner_records untuk dihapus:', err);
+  }
+
+  // 3. halaqah_profiles/{uid} and teacher_codes/{code}
+  try {
+    const profileRef = doc(db, 'halaqah_profiles', uid);
+    const profileSnap = await getDocFromServer(profileRef);
+    if (profileSnap.exists()) {
+      const data = profileSnap.data();
+      if (data?.teacherCode) {
+        refsToDelete.push(doc(db, 'teacher_codes', data.teacherCode));
+      }
+      refsToDelete.push(profileRef);
+    }
+  } catch (err) {
+    console.warn('Gagal membaca halaqah_profile untuk dihapus:', err);
+  }
+
+  // 4. teachers/{uid}/manual_students/* and their verses
+  try {
+    const studentsSnap = await getDocs(collection(db, 'teachers', uid, 'manual_students'));
+    for (const studentDoc of studentsSnap.docs) {
+      try {
+        const studentVersesSnap = await getDocs(
+          collection(db, 'teachers', uid, 'manual_students', studentDoc.id, 'verses')
+        );
+        studentVersesSnap.forEach((v) => refsToDelete.push(v.ref));
+      } catch (err) {
+        console.warn('Gagal membaca ayat manual_student untuk dihapus:', err);
+      }
+      refsToDelete.push(studentDoc.ref);
+    }
+  } catch (err) {
+    console.warn('Gagal membaca manual_students untuk dihapus:', err);
+  }
+
+  // Commit deletion in batches of 400
+  const BATCH_SIZE = 400;
+  for (let i = 0; i < refsToDelete.length; i += BATCH_SIZE) {
+    const batch = writeBatch(db);
+    const chunk = refsToDelete.slice(i, i + BATCH_SIZE);
+    chunk.forEach((ref) => batch.delete(ref));
+    await batch.commit();
+  }
+
+  // 5. Clean local storage cache
   try {
     localStorage.removeItem('quran_firebase_sync_' + uid);
+    localStorage.removeItem('halaqah_pending_' + uid);
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new Event('halaqah-pending'));
+    }
   } catch {
     /* Safe ignore */
   }
+}
+
+export async function deleteCloudBackup(uid: string): Promise<void> {
+  await deleteAllUserCloudData(uid);
 }
 
 export function isValidBackupPayload(value: unknown): value is CloudBackupPayload {

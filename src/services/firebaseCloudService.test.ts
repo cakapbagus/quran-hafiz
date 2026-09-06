@@ -1,5 +1,13 @@
 import { describe, expect, it, vi, afterEach } from 'vitest';
-import { buildBackupPayload, isValidBackupPayload, signInGoogle, getCurrentUserId, subscribeCloudAuth } from './firebaseCloudService';
+import {
+  buildBackupPayload,
+  isValidBackupPayload,
+  signInGoogle,
+  getCurrentUserId,
+  subscribeCloudAuth,
+  deleteCloudBackup,
+  deleteAllUserCloudData
+} from './firebaseCloudService';
 import { DEFAULT_SETTINGS } from './storageService';
 
 describe('Firebase cloud save', () => {
@@ -29,5 +37,10 @@ describe('Firebase cloud save', () => {
     const callback = vi.fn();
     subscribeCloudAuth(callback)();
     expect(callback).toHaveBeenCalledWith(null);
+  });
+
+  it('rejects deletion when user session does not match', async () => {
+    await expect(deleteCloudBackup('unauthenticated-user')).rejects.toThrow('Sesi Firebase berubah');
+    await expect(deleteAllUserCloudData('unauthenticated-user')).rejects.toThrow('Sesi Firebase berubah');
   });
 });

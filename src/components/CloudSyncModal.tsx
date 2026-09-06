@@ -312,7 +312,7 @@ export const CloudSyncModal: React.FC<CloudSyncModalProps> = ({
     if (!token) return;
 
     const confirmed = window.confirm(
-      'PERINGATAN: Tindakan ini akan menghapus permanen berkas cadangan Anda di cloud Firebase dan memutuskan akun Google dari perangkat ini. Data lokal Anda tidak akan dihapus. Lanjutkan?'
+      'PERINGATAN: Tindakan ini akan menghapus seluruh data Anda di cloud Firebase (cadangan, profil, catatan hafalan) secara permanen dan memutuskan akun Google dari perangkat ini. Data lokal Anda tidak akan dihapus. Lanjutkan?'
     );
     if (!confirmed) return;
 
@@ -329,7 +329,7 @@ export const CloudSyncModal: React.FC<CloudSyncModalProps> = ({
       setLastSyncedAt(null);
       setStatusMessage({
         type: 'success',
-        text: 'Data cadangan di cloud Firebase berhasil dihapus dan akun telah diputuskan.'
+        text: 'Seluruh data di cloud Firebase berhasil dihapus dan akun telah diputuskan.'
       });
     } catch (err: any) {
       console.error('Delete cloud data failed:', err);
