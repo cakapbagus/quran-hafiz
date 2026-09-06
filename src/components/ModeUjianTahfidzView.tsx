@@ -540,8 +540,11 @@ export const ModeUjianTahfidzView: React.FC<ModeUjianTahfidzViewProps> = ({
                           type="number"
                           min={1}
                           max={286}
-                          value={config.customStartVerse || 1}
-                          onChange={(e) => setConfig((prev) => ({ ...prev, customStartVerse: Number(e.target.value) }))}
+                          value={config.customStartVerse ?? ''}
+                          inputMode="numeric"
+                          onFocus={(e) => e.currentTarget.select()}
+                          onChange={(e) => setConfig((prev) => ({ ...prev, customStartVerse: e.target.value === '' ? undefined : Number(e.target.value) }))}
+                          onBlur={() => setConfig((prev) => ({ ...prev, customStartVerse: Math.max(1, Math.min(286, prev.customStartVerse || 1)) }))}
                           className="w-full p-2 text-xs rounded-xl bg-[#15171E] border border-[#2A2D35] text-[#E2E2E2]"
                         />
                       </div>
@@ -551,8 +554,11 @@ export const ModeUjianTahfidzView: React.FC<ModeUjianTahfidzViewProps> = ({
                           type="number"
                           min={1}
                           max={286}
-                          value={config.customEndVerse || 30}
-                          onChange={(e) => setConfig((prev) => ({ ...prev, customEndVerse: Number(e.target.value) }))}
+                          value={config.customEndVerse ?? ''}
+                          inputMode="numeric"
+                          onFocus={(e) => e.currentTarget.select()}
+                          onChange={(e) => setConfig((prev) => ({ ...prev, customEndVerse: e.target.value === '' ? undefined : Number(e.target.value) }))}
+                          onBlur={() => setConfig((prev) => ({ ...prev, customEndVerse: Math.max(prev.customStartVerse || 1, Math.min(286, prev.customEndVerse || 30)) }))}
                           className="w-full p-2 text-xs rounded-xl bg-[#15171E] border border-[#2A2D35] text-[#E2E2E2]"
                         />
                       </div>

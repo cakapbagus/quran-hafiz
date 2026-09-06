@@ -73,6 +73,8 @@ interface CloudSyncModalProps {
   hafalanRecords: Record<string, HafalanVerseRecord>;
   lastRead: LastRead | null;
   onRestoreData: (data: CloudBackupPayload['data']) => void;
+  onImportLegacyHafalan?: () => Promise<void> | void;
+  hasLegacyHafalan?: boolean;
 }
 
 export const CloudSyncModal: React.FC<CloudSyncModalProps> = ({
@@ -83,9 +85,12 @@ export const CloudSyncModal: React.FC<CloudSyncModalProps> = ({
   bookmarks,
   hafalanRecords,
   lastRead,
-  onRestoreData
+  onRestoreData,
+  onImportLegacyHafalan,
+  hasLegacyHafalan = false
 }) => {
   const dialogRef = useDialogAccessibility(onClose);
+  const [isImportingLegacy, setIsImportingLegacy] = useState(false);
   const [token, setToken] = useState<string | null>(getCurrentUserId());
   const [userProfile, setUserProfile] = useState<GoogleUserProfile | null>(getCurrentGoogleUser());
   const [lastSyncedAt, setLastSyncedAt] = useState<string | null>(getStoredLastSyncedAt());
@@ -607,6 +612,37 @@ export const CloudSyncModal: React.FC<CloudSyncModalProps> = ({
                 <span>Cadangan Firebase: <strong className="text-[#E2E2E2]">users/UID/backups/current</strong></span>
               </span>
               <span>{formatTimestamp(cloudFileInfo.modifiedTime)}</span>
+            </div>
+          )}
+
+          {/* Import Legacy Hafalan Local */}
+          {token && onImportLegacyHafalan && (
+            <div className="p-3.5 rounded-2xl bg-[#0F1115] border border-[#2A2D35] flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+              <div>
+                <p className="text-xs font-semibold text-[#E2E2E2]">Impor Hafalan Lokal Lama</p>
+                <p className="text-[11px] text-[#8A8D9A]">
+                  Tambahkan ayat hafalan di perangkat ini ke akun cloud (hanya ayat yang belum ada).
+                </p>
+              </div>
+              <button
+                type="button"
+                disabled={isImportingLegacy || !hasLegacyHafalan}
+                onClick={async () => {
+                  if (!window.confirm('Impor hafalan lokal lama ke akun ini? Hanya ayat yang belum ada di cloud akan ditambahkan.')) return;
+                  setIsImportingLegacy(true);
+                  try {
+                    await onImportLegacyHafalan();
+                    setStatusMessage({ type: 'success', text: 'Hafalan lokal berhasil diimpor ke akun cloud.' });
+                  } catch (err: any) {
+                    setStatusMessage({ type: 'error', text: err?.message || 'Gagal mengimpor hafalan lokal.' });
+                  } finally {
+                    setIsImportingLegacy(false);
+                  }
+                }}
+                className="shrink-0 px-3.5 py-2 rounded-xl border border-[#D4AF37]/50 text-[#D4AF37] hover:bg-[#D4AF37]/10 text-xs font-semibold disabled:opacity-40 transition cursor-pointer"
+              >
+                {isImportingLegacy ? 'Mengimpor…' : 'Impor Hafalan Lokal'}
+              </button>
             </div>
           )}
 

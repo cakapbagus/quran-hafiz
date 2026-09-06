@@ -55,6 +55,7 @@ import { HalaqahPanel } from './components/HalaqahPanel';
 import { saveVerse, watchRecords, type Records } from './services/halaqahService';
 
 export default function App() {
+  const [learningRoomOpen, setLearningRoomOpen] = useState(false);
   const [teacherMode, updateTeacherMode] = useState(() => window.location.hash === '#/guru');
   const setTeacherMode = (teacher: boolean) => {
     window.location.hash = teacher ? '/guru' : '/murid';
@@ -519,6 +520,24 @@ export default function App() {
   };
 
   // Navigation handlers
+  const handleUpdateHafalanRangeStatus = async (
+    surahNumber: number,
+    startVerse: number,
+    endVerse: number,
+    status: HafalanStatusType
+  ) => {
+    for (let verseNumber = startVerse; verseNumber <= endVerse; verseNumber++) {
+      updatePersonalStatus(surahNumber, verseNumber, status);
+    }
+  };
+
+  const handleOpenReadTab = () => {
+    setLearningRoomOpen(false);
+    pendingReadActionRef.current = null;
+    setSelectedSurahNumber(null);
+    setActiveTab('read');
+  };
+
   const handleSelectSurah = (surahNum: number) => {
     setSelectedSurahNumber(surahNum);
     setActiveTab('read');
@@ -570,39 +589,36 @@ export default function App() {
     <div className="min-h-screen bg-(--bg-app) text-(--text-main) font-sans transition-colors duration-300 flex flex-col">
 
       {sharedError && <p role="alert" className="p-4 text-red-500">{sharedError}</p>}
-      {sharedUid && sharedReady && !teacherMode && <button className="m-4 border rounded-lg p-2" onClick={async () => {
-        if (!window.confirm('Impor hafalan lokal lama ke akun ini? Hanya ayat yang belum ada di cloud akan ditambahkan.')) return;
-        try {
-          for (const [key, record] of Object.entries(getStoredHafalanRecords()) as [string, HafalanVerseRecord][]) {
-            if (!sharedRecords[key]) await saveVerse({ uid: sharedUid }, record, 0);
-          }
-        } catch (error) { setSharedError(error instanceof Error ? error.message : String(error)); }
-      }}>Impor Hafalan Lokal Lama</button>}
       {/* Header */}
       <Header
         teacherMode={teacherMode}
+        learningRoomOpen={learningRoomOpen}
+        onToggleLearningRoom={() => setLearningRoomOpen(open => !open)}
         setTeacherMode={setTeacherMode}
         activeTab={activeTab}
         setActiveTab={(tab) => {
-          setActiveTab(tab);
-          if (tab === 'read' && selectedSurahNumber === null) {
-            setSelectedSurahNumber(1);
+          setLearningRoomOpen(false);
+          if (tab === 'read') {
+            handleOpenReadTab();
+            return;
           }
+          setActiveTab(tab);
         }}
         settings={settings}
         updateSettings={(newSettings) => setSettings((prev) => ({ ...prev, ...newSettings }))}
         lastRead={lastRead}
         onResumeLastRead={handleResumeLastRead}
         onOpenSettings={() => setIsSettingsOpen(true)}
-        onOpenCloudSync={() => setIsCloudSyncOpen(true)}
-        isCloudConnected={isCloudConnected}
         searchQuery={searchQuery}
         setSearchQuery={setSearchQuery}
         bookmarksCount={bookmarks.length}
       />
 
-      <HalaqahPanel teacherMode={teacherMode} />
-      <div hidden={teacherMode}>
+      <div hidden={!teacherMode && !learningRoomOpen}>
+        <HalaqahPanel teacherMode={teacherMode} />
+        {!teacherMode && <div className="max-w-7xl mx-auto px-4 pb-4"><button type="button" className="border rounded-xl px-4 py-2 hover:bg-emerald-500/10" onClick={() => setLearningRoomOpen(false)}>Kembali ke Al-Quran</button></div>}
+      </div>
+      <div hidden={teacherMode || learningRoomOpen}>
       {/* Main Body */}
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 pt-6">
         {/* Tab 1: Read Al-Quran (Surah List OR Surah Detail View) */}
@@ -619,7 +635,6 @@ export default function App() {
                 hafalanRecords={hafalanRecords}
                 searchQuery={searchQuery}
                 setSearchQuery={setSearchQuery}
-                onUpdateSurahHafalanStatus={handleUpdateSurahHafalanStatus}
               />
             ) : isLoadingSurah ? (
               <div className="text-center py-24 space-y-3">
@@ -692,7 +707,7 @@ export default function App() {
             settings={settings}
             hafalanRecords={hafalanRecords}
             onUpdateHafalanStatus={handleUpdateHafalanStatus}
-            onUpdateSurahHafalanStatus={handleUpdateSurahHafalanStatus}
+            onUpdateHafalanRangeStatus={handleUpdateHafalanRangeStatus}
             playbackState={playbackState}
             onPlayRangeAudio={handlePlayRangeAudio}
             onPauseAudio={handlePauseAudio}
@@ -773,6 +788,16 @@ export default function App() {
         hafalanRecords={hafalanRecords}
         lastRead={lastRead}
         onRestoreData={handleRestoreCloudData}
+        hasLegacyHafalan={Object.keys(getStoredHafalanRecords()).length > 0}
+        onImportLegacyHafalan={async () => {
+          if (!sharedUid) throw new Error('Silakan hubungkan akun Google terlebih dahulu.');
+          const localRecords = getStoredHafalanRecords();
+          for (const [key, record] of Object.entries(localRecords) as [string, HafalanVerseRecord][]) {
+            if (!sharedRecords[key]) {
+              await saveVerse({ uid: sharedUid }, record, 0);
+            }
+          }
+        }}
       />
 
       {/* Settings Modal */}

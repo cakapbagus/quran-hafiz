@@ -180,7 +180,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
           <label className="flex items-center justify-between p-3 rounded-2xl bg-[#0F1115] border border-[#2A2D35] cursor-pointer hover:border-[#D4AF37]/50 transition">
             <div className="space-y-0.5">
               <span className="text-xs font-semibold text-[#E2E2E2] flex items-center gap-1.5">
-                <span>Tajwid Berwarna pada Teks Arab</span>
+                <span>Tajwid Berwarna</span>
                 <span className="text-[10px] px-1.5 py-0.2 rounded bg-[#D4AF37]/20 text-[#D4AF37] font-bold">Rekomendasi</span>
               </span>
               <span className="text-[10px] text-[#8A8D9A] block">
@@ -197,7 +197,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
 
           <label className="flex items-center justify-between p-3 rounded-2xl bg-[#0F1115] border border-[#2A2D35] cursor-pointer">
             <span className="text-xs font-semibold text-[#E2E2E2]">
-              Tampilkan Terjemahan Bahasa Indonesia
+              Terjemahan Bahasa Indonesia
             </span>
             <input
               type="checkbox"
@@ -209,7 +209,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
 
           <label className="flex items-center justify-between p-3 rounded-2xl bg-[#0F1115] border border-[#2A2D35] cursor-pointer">
             <span className="text-xs font-semibold text-[#E2E2E2]">
-              Tampilkan Transliterasi Latin
+              Transliterasi Latin
             </span>
             <input
               type="checkbox"

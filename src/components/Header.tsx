@@ -11,7 +11,6 @@ import {
   RotateCcw,
   GraduationCap,
   Sparkles,
-  Cloud,
   ChevronDown,
   ChevronUp
 } from 'lucide-react';
@@ -21,6 +20,8 @@ import packageInfo from '../../package.json';
 export type MainTabType = 'read' | 'hafalan' | 'ujian' | 'tajwid' | 'bookmark' | 'progress';
 
 interface HeaderProps {
+  learningRoomOpen?: boolean;
+  onToggleLearningRoom?: () => void;
   teacherMode?: boolean;
   setTeacherMode?: (teacher: boolean) => void;
   activeTab: MainTabType;
@@ -30,14 +31,14 @@ interface HeaderProps {
   lastRead: LastRead | null;
   onResumeLastRead: () => void;
   onOpenSettings: () => void;
-  onOpenCloudSync: () => void;
-  isCloudConnected?: boolean;
   searchQuery: string;
   setSearchQuery: (q: string) => void;
   bookmarksCount: number;
 }
 
 export const Header: React.FC<HeaderProps> = ({
+  learningRoomOpen = false,
+  onToggleLearningRoom,
   teacherMode = false,
   setTeacherMode,
   activeTab,
@@ -47,8 +48,6 @@ export const Header: React.FC<HeaderProps> = ({
   lastRead,
   onResumeLastRead,
   onOpenSettings,
-  onOpenCloudSync,
-  isCloudConnected = false,
   searchQuery,
   setSearchQuery,
   bookmarksCount
@@ -94,7 +93,7 @@ export const Header: React.FC<HeaderProps> = ({
           </div>
 
           {/* Search Bar (When in Read or Hafalan tab) */}
-          {!teacherMode && (activeTab === 'read' || activeTab === 'hafalan') && (
+          {!teacherMode && !learningRoomOpen && (activeTab === 'read' || activeTab === 'hafalan') && (
             <div className="flex-1 max-w-md hidden md:block relative">
               <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[#6A6D7A]" />
               <input
@@ -117,27 +116,21 @@ export const Header: React.FC<HeaderProps> = ({
 
           {/* Actions & Utilities */}
           <div className="flex items-center gap-2">
-            {/* Firebase Cloud Save button */}
-            <button
-              onClick={onOpenCloudSync}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold border transition cursor-pointer ${
-                isCloudConnected
-                  ? 'bg-emerald-950/30 border-emerald-700/50 text-emerald-300 hover:bg-emerald-900/40'
-                  : 'bg-[#15171E] hover:bg-[#1A1C23] text-[#D4AF37] border-[#2A2D35]'
-              }`}
-              title="Cloud Save Firebase (Sinkronkan Data)"
+
+            {!teacherMode && <button
+              type="button"
+              onClick={onToggleLearningRoom}
+              aria-pressed={learningRoomOpen}
+              aria-label="Ruang Belajar"
+              title="Ruang Belajar"
+              className={`flex items-center gap-1.5 p-2 sm:px-3 sm:py-1.5 rounded-xl text-xs font-semibold border transition cursor-pointer ${learningRoomOpen ? 'bg-[#D4AF37] text-[#0A0A0B] border-[#D4AF37]' : 'bg-[#15171E] hover:bg-[#1A1C23] text-[#D4AF37] border-[#2A2D35]'}`}
             >
-              <Cloud className="w-4 h-4 text-[#D4AF37]" />
-              <span className="hidden sm:inline">
-                {isCloudConnected ? 'Drive Terhubung' : 'Cloud Save'}
-              </span>
-              {isCloudConnected && (
-                <span className="w-2 h-2 rounded-full bg-emerald-400 inline-block animate-pulse" />
-              )}
-            </button>
+              <GraduationCap className="w-4 h-4" />
+              <span className="hidden sm:inline">Ruang Belajar</span>
+            </button>}
 
             {/* Last Read Quick Resume */}
-            {!teacherMode && lastRead && (
+            {!teacherMode && !learningRoomOpen && lastRead && (
               <button
                 onClick={onResumeLastRead}
                 title={`Lanjutkan Surah ${lastRead.surahName} Ayat ${lastRead.verseNumber}`}

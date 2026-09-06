@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { SurahDetail, Verse, HafalanVerseRecord, HafalanStatusType, UserSettings, AudioPlaybackState } from '../types';
-import { getSurahHafalanStatus } from '../services/storageService';
+
 import { ALL_SURAHS } from '../data/surahList';
 import { MushafArabicText, toArabicNumerals } from './MushafArabicText';
 import {
@@ -31,7 +31,7 @@ interface HafalanModeViewProps {
   settings: UserSettings;
   hafalanRecords: Record<string, HafalanVerseRecord>;
   onUpdateHafalanStatus: (verseNumber: number, status: HafalanVerseRecord['status']) => void;
-  onUpdateSurahHafalanStatus?: (surahNumber: number, totalVerses: number, status: HafalanStatusType) => void;
+  onUpdateHafalanRangeStatus?: (surahNumber: number, startVerse: number, endVerse: number, status: HafalanStatusType) => void;
   playbackState: AudioPlaybackState;
   onPlayRangeAudio: (startVerse: number, endVerse: number, repeatCount: number) => void;
   onPauseAudio: () => void;
@@ -45,7 +45,7 @@ export const HafalanModeView: React.FC<HafalanModeViewProps> = ({
   settings,
   hafalanRecords,
   onUpdateHafalanStatus,
-  onUpdateSurahHafalanStatus,
+  onUpdateHafalanRangeStatus,
   playbackState,
   onPlayRangeAudio,
   onPauseAudio,
@@ -55,6 +55,8 @@ export const HafalanModeView: React.FC<HafalanModeViewProps> = ({
   const [selectedSurahNumber, setSelectedSurahNumber] = useState<number>(currentSurah?.nomor || 67); // Default Al-Mulk
   const [startVerse, setStartVerse] = useState<number>(1);
   const [endVerse, setEndVerse] = useState<number>(5);
+  const [startVerseInput, setStartVerseInput] = useState('1');
+  const [endVerseInput, setEndVerseInput] = useState('5');
   const [repeatPerVerse, setRepeatPerVerse] = useState<number>(3);
   const [maskType, setMaskType] = useState<'none' | 'blur_all' | 'first_letters'>('none');
   const [revealedVerses, setRevealedVerses] = useState<Record<number, boolean>>({});
@@ -63,8 +65,11 @@ export const HafalanModeView: React.FC<HafalanModeViewProps> = ({
   useEffect(() => {
     if (currentSurah) {
       setSelectedSurahNumber(currentSurah.nomor);
+      const initialEnd = Math.min(5, currentSurah.jumlahAyat);
       setStartVerse(1);
-      setEndVerse(Math.min(5, currentSurah.jumlahAyat));
+      setEndVerse(initialEnd);
+      setStartVerseInput('1');
+      setEndVerseInput(String(initialEnd));
       setSelectedVerseNumber(null);
       setRevealedVerses({});
     }
@@ -75,15 +80,20 @@ export const HafalanModeView: React.FC<HafalanModeViewProps> = ({
     onSelectSurah(num);
   };
 
-  const handleStartVerseChange = (v: number) => {
-    const val = Math.max(1, Math.min(v, currentSurah?.jumlahAyat || 286));
+  const commitStartVerse = () => {
+    const val = Math.max(1, Math.min(Number(startVerseInput) || 1, currentSurah?.jumlahAyat || 286));
     setStartVerse(val);
-    if (val > endVerse) setEndVerse(val);
+    setStartVerseInput(String(val));
+    if (val > endVerse) {
+      setEndVerse(val);
+      setEndVerseInput(String(val));
+    }
   };
 
-  const handleEndVerseChange = (v: number) => {
-    const val = Math.max(startVerse, Math.min(v, currentSurah?.jumlahAyat || 286));
+  const commitEndVerse = () => {
+    const val = Math.max(startVerse, Math.min(Number(endVerseInput) || startVerse, currentSurah?.jumlahAyat || 286));
     setEndVerse(val);
+    setEndVerseInput(String(val));
   };
 
   const toggleVerseReveal = (verseNum: number) => {
@@ -97,6 +107,11 @@ export const HafalanModeView: React.FC<HafalanModeViewProps> = ({
   const filteredVerses = currentSurah
     ? currentSurah.ayat.filter((v) => v.nomorAyat >= startVerse && v.nomorAyat <= endVerse)
     : [];
+  const rangeStatus: HafalanStatusType | '-' = filteredVerses.length === 0
+    ? 'not_started'
+    : filteredVerses.every(verse => (hafalanRecords[`${selectedSurahNumber}_${verse.nomorAyat}`]?.status || 'not_started') === (hafalanRecords[`${selectedSurahNumber}_${filteredVerses[0].nomorAyat}`]?.status || 'not_started'))
+      ? hafalanRecords[`${selectedSurahNumber}_${filteredVerses[0].nomorAyat}`]?.status || 'not_started'
+      : '-';
   const selectedVerse = filteredVerses.find((verse) => verse.nomorAyat === selectedVerseNumber) ?? null;
   const selectedHafalanRecord = selectedVerse
     ? hafalanRecords[`${selectedSurahNumber}_${selectedVerse.nomorAyat}`]
@@ -203,8 +218,23 @@ export const HafalanModeView: React.FC<HafalanModeViewProps> = ({
               type="number"
               min={1}
               max={currentSurah?.jumlahAyat || 286}
-              value={startVerse}
-              onChange={(e) => handleStartVerseChange(Number(e.target.value))}
+              value={startVerseInput}
+              inputMode="numeric"
+              onFocus={(e) => e.currentTarget.select()}
+              onChange={(e) => {
+                const input = e.target.value;
+                setStartVerseInput(input);
+                const value = Number(input);
+                if (input !== '' && Number.isInteger(value) && value >= 1 && value <= (currentSurah?.jumlahAyat || 286)) {
+                  setStartVerse(value);
+                  if (value > endVerse) {
+                    setEndVerse(value);
+                    setEndVerseInput(String(value));
+                  }
+                }
+              }}
+              onBlur={commitStartVerse}
+              onKeyDown={(e) => { if (e.key === 'Enter') e.currentTarget.blur(); }}
               className="w-full px-3 py-2 text-xs rounded-xl bg-[#0F1115] border border-[#2A2D35] font-medium text-[#E2E2E2] focus:outline-none focus:border-[#D4AF37]"
             />
           </div>
@@ -218,8 +248,19 @@ export const HafalanModeView: React.FC<HafalanModeViewProps> = ({
               type="number"
               min={startVerse}
               max={currentSurah?.jumlahAyat || 286}
-              value={endVerse}
-              onChange={(e) => handleEndVerseChange(Number(e.target.value))}
+              value={endVerseInput}
+              inputMode="numeric"
+              onFocus={(e) => e.currentTarget.select()}
+              onChange={(e) => {
+                const input = e.target.value;
+                setEndVerseInput(input);
+                const value = Number(input);
+                if (input !== '' && Number.isInteger(value) && value >= startVerse && value <= (currentSurah?.jumlahAyat || 286)) {
+                  setEndVerse(value);
+                }
+              }}
+              onBlur={commitEndVerse}
+              onKeyDown={(e) => { if (e.key === 'Enter') e.currentTarget.blur(); }}
               className="w-full px-3 py-2 text-xs rounded-xl bg-[#0F1115] border border-[#2A2D35] font-medium text-[#E2E2E2] focus:outline-none focus:border-[#D4AF37]"
             />
           </div>
@@ -250,21 +291,21 @@ export const HafalanModeView: React.FC<HafalanModeViewProps> = ({
               Target: <strong className="text-[#D4AF37]">{currentSurah?.namaLatin} Ayat {startVerse} - {endVerse}</strong> ({filteredVerses.length} ayat)
             </p>
 
-            {onUpdateSurahHafalanStatus && currentSurah && (
+            {onUpdateHafalanRangeStatus && currentSurah && (
               <div className="flex items-center gap-2 text-xs">
-                <span className="text-[#8A8D9A]">Status Surah:</span>
+                <span className="text-[#8A8D9A]">Status Rentang:</span>
                 <select
-                  value={getSurahHafalanStatus(currentSurah.nomor, currentSurah.jumlahAyat, hafalanRecords)}
+                  value={rangeStatus}
                   onChange={(e) => {
                     const nextStatus = e.target.value;
                     if (nextStatus !== '-') {
-                      onUpdateSurahHafalanStatus(currentSurah.nomor, currentSurah.jumlahAyat, nextStatus as HafalanStatusType);
+                      onUpdateHafalanRangeStatus(currentSurah.nomor, startVerse, endVerse, nextStatus as HafalanStatusType);
                     }
                   }}
                   className="rounded-lg border border-[#2A2D35] bg-[#0F1115] px-2.5 py-1 text-xs font-semibold text-[#E2E2E2] outline-none focus:border-[#D4AF37] cursor-pointer"
-                  aria-label={`Status hafalan surah ${currentSurah.namaLatin}`}
+                  aria-label={`Status hafalan rentang ayat ${startVerse} sampai ${endVerse}`}
                 >
-                  {getSurahHafalanStatus(currentSurah.nomor, currentSurah.jumlahAyat, hafalanRecords) === '-' && (
+                  {rangeStatus === '-' && (
                     <option value="-" disabled>
                       -
                     </option>

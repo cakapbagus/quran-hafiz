@@ -73,22 +73,20 @@ export const AudioPlayerBar: React.FC<AudioPlayerBarProps> = ({
         className="block w-full h-1.5 accent-[#D4AF37] cursor-pointer"
       />
 
-      <div className="max-w-7xl mx-auto px-4 py-2.5 sm:py-3 flex items-center justify-between gap-3">
+      <div className="max-w-7xl mx-auto px-4 py-2.5 sm:py-3 flex flex-wrap sm:flex-nowrap items-center justify-between gap-2 sm:gap-3">
         {/* Left: Surah & Verse Info + Qari Button */}
-        <div className="flex items-center gap-3 min-w-0">
+        <div className="order-3 sm:order-1 flex w-full sm:w-auto items-center gap-3 min-w-0 border-t border-[#1F2128] pt-2 sm:border-0 sm:pt-0">
           <div className="w-10 h-10 rounded-xl bg-[#15171E] border border-[#2A2D35] flex items-center justify-center font-bold text-[#D4AF37] text-sm shrink-0">
             {playbackState.verseNumber}
           </div>
-          <div className="min-w-0">
+          <div className="min-w-0 flex-1 sm:block flex items-center gap-2">
             <h4 className="text-xs sm:text-sm font-bold text-[#E2E2E2] truncate flex items-center gap-2">
               <span>{currentSurah?.namaLatin || `Surah ${playbackState.surahNumber}`}</span>
-              <span className="text-[10px] px-2 py-0.5 rounded bg-[#1A1C23] text-[#D4AF37] border border-[#2A2D35]">
-                Ayat {playbackState.verseNumber}
-              </span>
             </h4>
+            <span className="sm:hidden text-[#4A4D58]">·</span>
             <button
               onClick={() => setShowQariDropdown(!showQariDropdown)}
-              className="text-[11px] text-[#8A8D9A] hover:text-[#D4AF37] flex items-center gap-1 transition cursor-pointer truncate"
+              className="flex text-[11px] text-[#8A8D9A] hover:text-[#D4AF37] items-center gap-1 transition cursor-pointer truncate"
             >
               <span>{selectedQari.name}</span>
               <ChevronUp className="w-3 h-3 text-[#D4AF37]" />
@@ -97,10 +95,10 @@ export const AudioPlayerBar: React.FC<AudioPlayerBarProps> = ({
         </div>
 
         {/* Center: Playback Controls */}
-        <div className="flex items-center gap-2 sm:gap-4">
+        <div className="order-1 sm:order-2 flex flex-1 sm:flex-none items-center justify-center gap-0.5 sm:gap-4">
           <button
             onClick={onPrevVerse}
-            className="p-2 rounded-xl text-[#8A8D9A] hover:text-[#E2E2E2] hover:bg-[#1A1C23] transition cursor-pointer"
+            className="p-1.5 sm:p-2 rounded-lg sm:rounded-xl text-[#8A8D9A] hover:text-[#E2E2E2] hover:bg-[#1A1C23] transition cursor-pointer"
             aria-label="Ayat sebelumnya"
           >
             <SkipBack className="w-4 h-4 sm:w-5 sm:h-5 fill-current" />
@@ -108,19 +106,19 @@ export const AudioPlayerBar: React.FC<AudioPlayerBarProps> = ({
 
           <button
             onClick={onPlayPause}
-            className="p-3 rounded-2xl bg-[#D4AF37] text-[#0A0A0B] hover:bg-[#B8962D] font-bold shadow-lg shadow-[#D4AF37]/20 transition active:scale-95 cursor-pointer"
+            className="p-2 sm:p-3 rounded-xl sm:rounded-2xl bg-[#D4AF37] text-[#0A0A0B] hover:bg-[#B8962D] font-bold shadow-lg shadow-[#D4AF37]/20 transition active:scale-95 cursor-pointer"
             aria-label={playbackState.isPlaying ? 'Jeda audio' : 'Putar audio'}
           >
             {playbackState.isPlaying ? (
-              <Pause className="w-5 h-5 sm:w-6 sm:h-6 fill-current" />
+              <Pause className="w-4 h-4 sm:w-6 sm:h-6 fill-current" />
             ) : (
-              <Play className="w-5 h-5 sm:w-6 sm:h-6 fill-current pl-0.5" />
+              <Play className="w-4 h-4 sm:w-6 sm:h-6 fill-current pl-0.5" />
             )}
           </button>
 
           <button
             onClick={onNextVerse}
-            className="p-2 rounded-xl text-[#8A8D9A] hover:text-[#E2E2E2] hover:bg-[#1A1C23] transition cursor-pointer"
+            className="p-1.5 sm:p-2 rounded-lg sm:rounded-xl text-[#8A8D9A] hover:text-[#E2E2E2] hover:bg-[#1A1C23] transition cursor-pointer"
             aria-label="Ayat selanjutnya"
           >
             <SkipForward className="w-4 h-4 sm:w-5 sm:h-5 fill-current" />
@@ -128,11 +126,11 @@ export const AudioPlayerBar: React.FC<AudioPlayerBarProps> = ({
         </div>
 
         {/* Right: Audio Speed & Looping Indicator */}
-        <div className="flex items-center gap-2">
+        <div className="order-2 sm:order-3 flex items-center gap-1 sm:gap-2">
           {/* Repeat / Loop Modal Trigger */}
           <button
             onClick={() => setShowLoopMenu(!showLoopMenu)}
-            className={`px-2.5 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition cursor-pointer border ${
+            className={`px-1.5 py-1 sm:px-2.5 sm:py-1.5 rounded-lg sm:rounded-xl text-[11px] sm:text-xs font-semibold flex items-center gap-1.5 transition cursor-pointer border ${
               playbackState.repeatCountTarget > 1
                 ? 'bg-[#D4AF37] text-[#0A0A0B] border-[#D4AF37]'
                 : 'bg-[#15171E] text-[#8A8D9A] border-[#2A2D35] hover:text-[#E2E2E2]'
@@ -150,7 +148,7 @@ export const AudioPlayerBar: React.FC<AudioPlayerBarProps> = ({
           {/* Speed Selector */}
           <button
             onClick={() => setShowSpeedMenu(!showSpeedMenu)}
-            className="px-2.5 py-1.5 rounded-xl text-xs font-semibold bg-[#15171E] border border-[#2A2D35] text-[#8A8D9A] hover:text-[#E2E2E2] transition cursor-pointer"
+            className="px-1.5 py-1 sm:px-2.5 sm:py-1.5 rounded-lg sm:rounded-xl text-[11px] sm:text-xs font-semibold bg-[#15171E] border border-[#2A2D35] text-[#8A8D9A] hover:text-[#E2E2E2] transition cursor-pointer"
             title="Kecepatan Putar Audio"
           >
             <Gauge className="w-3.5 h-3.5 inline mr-1 text-[#D4AF37]" />
@@ -159,7 +157,7 @@ export const AudioPlayerBar: React.FC<AudioPlayerBarProps> = ({
 
           <button
             onClick={onClose}
-            className="p-2 rounded-xl text-[#8A8D9A] hover:text-[#E2E2E2] hover:bg-[#1A1C23] transition cursor-pointer shrink-0"
+            className="p-1.5 sm:p-2 rounded-lg sm:rounded-xl text-[#8A8D9A] hover:text-[#E2E2E2] hover:bg-[#1A1C23] transition cursor-pointer shrink-0"
             aria-label="Tutup pemutar audio"
             title="Tutup pemutar audio"
           >

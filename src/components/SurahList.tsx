@@ -1,8 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { ALL_SURAHS } from '../data/surahList';
-import { SurahSummary, LastRead, HafalanVerseRecord, HafalanStatusType } from '../types';
-import { getSurahHafalanStatus } from '../services/storageService';
-import { Play, BookOpen, Search, CheckCircle2, Award } from 'lucide-react';
+import { SurahSummary, LastRead, HafalanVerseRecord } from '../types';
+import { Play, BookOpen, Search, CheckCircle2, Flag } from 'lucide-react';
 
 interface SurahListProps {
   onSelectSurah: (surahNumber: number) => void;
@@ -11,7 +10,6 @@ interface SurahListProps {
   hafalanRecords: Record<string, HafalanVerseRecord>;
   searchQuery: string;
   setSearchQuery: (q: string) => void;
-  onUpdateSurahHafalanStatus?: (surahNumber: number, totalVerses: number, status: HafalanStatusType) => void;
 }
 
 export const SurahList: React.FC<SurahListProps> = ({
@@ -20,8 +18,7 @@ export const SurahList: React.FC<SurahListProps> = ({
   lastRead,
   hafalanRecords,
   searchQuery,
-  setSearchQuery,
-  onUpdateSurahHafalanStatus
+  setSearchQuery
 }) => {
   const [selectedJuz, setSelectedJuz] = useState<number | null>(null);
   const [selectedType, setSelectedType] = useState<'all' | 'Mekkah' | 'Madinah'>('all');
@@ -180,8 +177,8 @@ export const SurahList: React.FC<SurahListProps> = ({
                       <h2 className="text-base font-bold text-[#E2E2E2] group-hover:text-[#D4AF37] transition-colors flex items-center gap-1.5">
                         {surah.namaLatin}
                         {isLastReadSurah && (
-                          <span className="px-2 py-0.5 text-[9px] uppercase tracking-wider font-bold rounded-full bg-[#D4AF37] text-[#0A0A0B]">
-                            Terakhir Dibaca
+                          <span className="inline-flex items-center justify-center rounded-full bg-[#D4AF37] p-1 text-[#0A0A0B]" title="Terakhir dibaca" aria-label="Terakhir dibaca">
+                            <Flag className="h-3 w-3 fill-current" aria-hidden="true" />
                           </span>
                         )}
                       </h2>
@@ -211,33 +208,6 @@ export const SurahList: React.FC<SurahListProps> = ({
                   </div>
 
                   <div className="flex items-center gap-2">
-                    {onUpdateSurahHafalanStatus && (
-                      <div onClick={(e) => e.stopPropagation()}>
-                        <select
-                          value={getSurahHafalanStatus(surah.nomor, surah.jumlahAyat, hafalanRecords)}
-                          onChange={(e) => {
-                            const val = e.target.value;
-                            if (val !== '-') {
-                              onUpdateSurahHafalanStatus(surah.nomor, surah.jumlahAyat, val as HafalanStatusType);
-                            }
-                          }}
-                          className="rounded-lg border border-[#2A2D35] bg-[#0F1115] px-2 py-1 text-[10px] font-semibold text-[#8A8D9A] outline-none hover:border-[#D4AF37]/60 focus:border-[#D4AF37] cursor-pointer"
-                          aria-label={`Status hafalan surah ${surah.namaLatin}`}
-                        >
-                          {getSurahHafalanStatus(surah.nomor, surah.jumlahAyat, hafalanRecords) === '-' && (
-                            <option value="-" disabled>
-                              -
-                            </option>
-                          )}
-                          <option value="not_started">Belum Dihafal</option>
-                          <option value="in_progress">Sedang Dihafal</option>
-                          <option value="review_needed">Perlu Murojaah</option>
-                          <option value="memorized">Mutqin</option>
-                        </select>
-                      </div>
-                    )}
-
-                    {/* Quick Play Audio Button */}
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
