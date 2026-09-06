@@ -77,22 +77,35 @@ ikut diuji.
    sebagai static site, dan mem-publish semua file di `api/` sebagai
    Serverless Functions.
 
-Tidak ada environment variable yang perlu diset di Vercel Project Settings
-untuk fitur bawaan aplikasi ini.
+### Firebase Cloud Save
 
-### Catatan: Google Drive Cloud Sync
+Cloud Save memakai Firebase Authentication (Google Provider) dan Cloud Firestore.
+`VITE_GOOGLE_CLIENT_ID` dan Google Drive API tidak lagi digunakan.
 
-Fitur "Cloud Sync" memakai Google Identity Services (OAuth) dan Google Drive
-API langsung dari browser (`src/services/googleDriveService.ts`). Client ID
-default dibaca dari `VITE_GOOGLE_CLIENT_ID` dan tidak tersedia otomatis di
-domain produksi Anda. Untuk mengaktifkan fitur ini setelah deploy:
+1. Buat project Firebase dan daftarkan Web App di Firebase Console.
+2. Aktifkan Authentication > Sign-in method > Google dan pilih support email.
+3. Tambahkan domain aplikasi dan localhost ke Authentication > Settings > Authorized domains.
+4. Buat database Cloud Firestore `(default)` dan publish isi `firestore.rules` melalui tab Rules.
+   Alternatif: gunakan Firebase CLI `firebase deploy --only firestore:rules --project ID_PROJECT_ANDA`.
+5. Salin `.env.example` ke `.env.local` dan isi keempat nilai dari konfigurasi Web App.
+   Untuk Vercel, isi environment variables yang sama lalu redeploy.
 
-1. Buat OAuth 2.0 Client ID (tipe "Web application") di
-   [Google Cloud Console](https://console.cloud.google.com/apis/credentials).
-2. Tambahkan domain Vercel Anda (mis. `https://nama-app.vercel.app`) ke
-   "Authorized JavaScript origins".
-3. Ganti nilai `DEFAULT_CLIENT_ID` di
-   `src/services/googleDriveService.ts` dengan Client ID Anda.
+Tanpa konfigurasi Firebase, fitur lokal tetap berjalan. Konfigurasi Web App bukan secret;
+Security Rules wajib dipasang agar setiap akun hanya mengakses backup miliknya.
+Jangan memasukkan service-account private key ke frontend.
+
+Backup JSON disimpan di `users/{uid}/backups/current`, maksimal 900 KB (di bawah batas
+Firestore 1 MiB). Custom API key tidak disertakan. Login dipersistenkan oleh Firebase Auth;
+logout tidak menghapus data lokal atau backup. Transaksi memeriksa versi backup agar
+perubahan perangkat lain tidak tertimpa diam-diam.
+
+**Migrasi:** backup Drive lama tidak dihapus atau diimpor otomatis. Bila diperlukan,
+pulihkan backup Drive memakai versi aplikasi lama terlebih dahulu. Setelah update,
+login Google dan cadangkan data lokal ke Firebase. Hapus `VITE_GOOGLE_CLIENT_ID` dari deployment.
+
+Firebase mengirim identitas login dan data backup ke layanan Google. Firestore memerlukan
+internet dan menggunakan kuota baca/tulis/penyimpanan; biaya bergantung pada paket dan
+pemakaian project. Uji login dan Security Rules pada project Firebase sebelum produksi.
 
 Fitur lain (murottal, hafalan, ujian tahfidz, bookmark) berjalan
 penuh tanpa konfigurasi tambahan.

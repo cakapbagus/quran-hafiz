@@ -18,7 +18,7 @@ export default function OfflineNotice() {
   return (
     <div role="status" className="fixed bottom-4 left-1/2 z-100 w-[min(90vw,32rem)] -translate-x-1/2 rounded-xl bg-amber-100 p-3 text-center text-sm text-amber-950 shadow-lg pointer-events-none">
       Anda sedang offline. Surah yang sudah dibuka dan data lokal tetap tersedia.
-      Audio streaming dan Google Drive memerlukan internet.
+      Audio streaming dan Firebase memerlukan internet.
     </div>
   );
 }

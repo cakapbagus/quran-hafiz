@@ -32,19 +32,19 @@ import {
   CloudBackupPayload
 } from '../types';
 import {
-  getStoredAccessToken,
-  saveStoredAccessToken,
-  getStoredGoogleUser,
-  saveStoredGoogleUser,
+  getCurrentUserId,
+  subscribeCloudAuth,
+  disconnectCloud,
+  getCurrentGoogleUser,
+
   getStoredLastSyncedAt,
   saveStoredLastSyncedAt,
-  requestGoogleAccessToken,
-  fetchGoogleUserProfile,
+  signInGoogle,
   findCloudBackupFile,
   uploadCloudBackup,
   downloadCloudBackup,
   buildBackupPayload
-} from '../services/googleDriveService';
+} from '../services/firebaseCloudService';
 
 function backupDataMatchesLocal(
   backup: CloudBackupPayload,
@@ -83,8 +83,8 @@ export const CloudSyncModal: React.FC<CloudSyncModalProps> = ({
   onRestoreData
 }) => {
   const dialogRef = useDialogAccessibility(onClose);
-  const [token, setToken] = useState<string | null>(getStoredAccessToken());
-  const [userProfile, setUserProfile] = useState<GoogleUserProfile | null>(getStoredGoogleUser());
+  const [token, setToken] = useState<string | null>(getCurrentUserId());
+  const [userProfile, setUserProfile] = useState<GoogleUserProfile | null>(getCurrentGoogleUser());
   const [lastSyncedAt, setLastSyncedAt] = useState<string | null>(getStoredLastSyncedAt());
 
   const [isLoadingAuth, setIsLoadingAuth] = useState<boolean>(false);
@@ -97,22 +97,29 @@ export const CloudSyncModal: React.FC<CloudSyncModalProps> = ({
   const [statusMessage, setStatusMessage] = useState<{ type: 'success' | 'error' | 'info'; text: string } | null>(null);
   const [conflictingBackup, setConflictingBackup] = useState<CloudBackupPayload | null>(null);
 
-  // Check user info and cloud backup file when token is available
+  useEffect(() => subscribeCloudAuth((uid) => {
+    setToken(uid);
+    setUserProfile(getCurrentGoogleUser());
+    setLastSyncedAt(getStoredLastSyncedAt());
+    setConflictingBackup(null);
+    setCloudFileInfo(null);
+  }), []);
+
+  // Check the server whenever the dialog opens.
   useEffect(() => {
-    if (token) {
-      // Fetch or refresh profile
-      fetchGoogleUserProfile(token).then((profile) => {
-        if (profile) setUserProfile(profile);
-      });
+    let cancelled = false;
+    if (token && isOpen) {
 
       // Check existing backup file in Drive
       setIsCheckingCloudFile(true);
       findCloudBackupFile(token)
         .then(async (file) => {
+          if (cancelled) return;
           setCloudFileInfo(file);
           const lastSync = getStoredLastSyncedAt();
-          if (file && (!lastSync || new Date(file.modifiedTime).getTime() > new Date(lastSync).getTime() + 1000)) {
+          if (file && (!lastSync || file.modifiedTime !== lastSync)) {
             const backup = await downloadCloudBackup(token, file.id);
+            if (cancelled) return;
             if (backupDataMatchesLocal(backup, settings, bookmarks, hafalanRecords, lastRead)) {
               saveStoredLastSyncedAt(file.modifiedTime);
               setLastSyncedAt(file.modifiedTime);
@@ -120,21 +127,23 @@ export const CloudSyncModal: React.FC<CloudSyncModalProps> = ({
               setConflictingBackup(backup);
               setStatusMessage({
                 type: 'info',
-                text: 'Data Google Drive berbeda dari data lokal. Pilih data yang ingin dipertahankan sebelum sinkronisasi dilanjutkan.'
+                text: 'Data Firebase berbeda dari data lokal. Pilih data yang ingin dipertahankan sebelum sinkronisasi dilanjutkan.'
               });
             }
           }
           setIsCheckingCloudFile(false);
         })
         .catch((err) => {
-          console.warn('Failed to check cloud file:', err);
-          if (!getStoredAccessToken()) setToken(null);
+          if (cancelled) return;
+          setStatusMessage({ type: 'error', text: err.message });
+          if (!getCurrentUserId()) setToken(null);
           setIsCheckingCloudFile(false);
         });
     } else {
       setCloudFileInfo(null);
     }
-  }, [token]);
+    return () => { cancelled = true; };
+  }, [token, isOpen]);
 
   if (!isOpen) return null;
 
@@ -143,39 +152,15 @@ export const CloudSyncModal: React.FC<CloudSyncModalProps> = ({
     setIsLoadingAuth(true);
     setStatusMessage(null);
     try {
-      const accessToken = await requestGoogleAccessToken();
-      setToken(accessToken);
-      const profile = await fetchGoogleUserProfile(accessToken);
+      const userId = await signInGoogle();
+      setToken(userId);
+      const profile = getCurrentGoogleUser();
       setUserProfile(profile);
       setStatusMessage({
         type: 'success',
-        text: `Berhasil terhubung dengan Google Drive akun ${profile?.email || 'Anda'}!`
+        text: `Berhasil terhubung dengan Firebase akun ${profile?.email || 'Anda'}!`
       });
 
-      // Auto check cloud backup file
-      const file = await findCloudBackupFile(accessToken);
-      setCloudFileInfo(file);
-      if (file) {
-        const backup = await downloadCloudBackup(accessToken, file.id);
-        if (backupDataMatchesLocal(backup, settings, bookmarks, hafalanRecords, lastRead)) {
-          saveStoredLastSyncedAt(file.modifiedTime);
-          setLastSyncedAt(file.modifiedTime);
-          setStatusMessage({ type: 'success', text: 'Data lokal dan Google Drive sudah sinkron.' });
-        } else {
-          setConflictingBackup(backup);
-          setStatusMessage({
-            type: 'info',
-            text: 'Ditemukan data Google Drive yang berbeda. Pilih data yang ingin dipertahankan.'
-          });
-        }
-      } else {
-        await uploadCloudBackup(
-          accessToken,
-          buildBackupPayload(settings, bookmarks, hafalanRecords, lastRead, profile?.email),
-          null
-        );
-        setLastSyncedAt(getStoredLastSyncedAt());
-      }
     } catch (err: any) {
       console.error('Google Sign In failed:', err);
       setStatusMessage({
@@ -188,9 +173,11 @@ export const CloudSyncModal: React.FC<CloudSyncModalProps> = ({
   };
 
   // Handle Google Logout / Disconnect
-  const handleDisconnectGoogle = () => {
-    saveStoredAccessToken(null);
-    saveStoredGoogleUser(null);
+  const handleDisconnectGoogle = async () => {
+    try { await disconnectCloud(); } catch (error) {
+      setStatusMessage({ type: 'error', text: error instanceof Error ? error.message : 'Gagal keluar dari Firebase.' });
+      return;
+    }
     setToken(null);
     setUserProfile(null);
     setCloudFileInfo(null);
@@ -220,7 +207,7 @@ export const CloudSyncModal: React.FC<CloudSyncModalProps> = ({
         userProfile?.email
       );
 
-      const res = await uploadCloudBackup(token, payload, cloudFileInfo?.id);
+      const res = await uploadCloudBackup(token, payload, cloudFileInfo?.modifiedTime ?? null);
       setCloudFileInfo({
         id: res.fileId,
         modifiedTime: res.modifiedTime,
@@ -231,14 +218,14 @@ export const CloudSyncModal: React.FC<CloudSyncModalProps> = ({
 
       setStatusMessage({
         type: 'success',
-        text: 'Semua data (Pengaturan, Bookmark, Status Hafalan, dan Terakhir Dibaca) berhasil dicadangkan ke Google Drive!'
+        text: 'Semua data (Pengaturan, Bookmark, Status Hafalan, dan Terakhir Dibaca) berhasil dicadangkan ke Firebase!'
       });
     } catch (err: any) {
       console.error('Backup failed:', err);
-      if (!getStoredAccessToken()) setToken(null);
+      if (!getCurrentUserId()) setToken(null);
       setStatusMessage({
         type: 'error',
-        text: err?.message || 'Gagal mencadangkan data ke Google Drive.'
+        text: err?.message || 'Gagal mencadangkan data ke Firebase.'
       });
     } finally {
       setIsSyncingUpload(false);
@@ -252,27 +239,27 @@ export const CloudSyncModal: React.FC<CloudSyncModalProps> = ({
       const result = await uploadCloudBackup(
         token,
         buildBackupPayload(settings, bookmarks, hafalanRecords, lastRead, userProfile?.email),
-        cloudFileInfo?.id
+        cloudFileInfo?.modifiedTime ?? null
       );
       setCloudFileInfo({ id: result.fileId, modifiedTime: result.modifiedTime, size: result.size });
       setLastSyncedAt(result.modifiedTime);
       setConflictingBackup(null);
-      setStatusMessage({ type: 'success', text: 'Data lokal dipertahankan dan telah disinkronkan ke Google Drive.' });
+      setStatusMessage({ type: 'success', text: 'Data lokal dipertahankan dan telah disinkronkan ke Firebase.' });
     } catch (err: any) {
-      setStatusMessage({ type: 'error', text: err?.message || 'Gagal menyimpan data lokal ke Google Drive.' });
+      setStatusMessage({ type: 'error', text: err?.message || 'Gagal menyimpan data lokal ke Firebase.' });
     } finally {
       setIsSyncingUpload(false);
     }
   };
 
-  const useDriveData = () => {
+  const useCloudData = () => {
     if (!conflictingBackup) return;
     onRestoreData(conflictingBackup.data);
     const syncedAt = cloudFileInfo?.modifiedTime || conflictingBackup.exportedAt;
     saveStoredLastSyncedAt(syncedAt);
     setLastSyncedAt(syncedAt);
     setConflictingBackup(null);
-    setStatusMessage({ type: 'success', text: 'Data Google Drive diterapkan ke perangkat ini. Sinkronisasi otomatis dilanjutkan.' });
+    setStatusMessage({ type: 'success', text: 'Data Firebase diterapkan ke perangkat ini. Sinkronisasi otomatis dilanjutkan.' });
   };
 
   // Handle Download / Restore
@@ -290,14 +277,14 @@ export const CloudSyncModal: React.FC<CloudSyncModalProps> = ({
     try {
       const targetFile = cloudFileInfo || (await findCloudBackupFile(token));
       if (!targetFile) {
-        throw new Error('Tidak ditemukan berkas cadangan (murottal_quran_cloud_backup.json) di Google Drive Anda.');
+        throw new Error('Tidak ditemukan berkas cadangan (users/UID/backups/current) di Firebase Anda.');
       }
 
       const backup = await downloadCloudBackup(token, targetFile.id);
       onRestoreData(backup.data);
 
-      setLastSyncedAt(new Date().toISOString());
-      saveStoredLastSyncedAt(new Date().toISOString());
+      setLastSyncedAt(targetFile.modifiedTime);
+      saveStoredLastSyncedAt(targetFile.modifiedTime);
 
       setStatusMessage({
         type: 'success',
@@ -307,10 +294,10 @@ export const CloudSyncModal: React.FC<CloudSyncModalProps> = ({
       });
     } catch (err: any) {
       console.error('Restore failed:', err);
-      if (!getStoredAccessToken()) setToken(null);
+      if (!getCurrentUserId()) setToken(null);
       setStatusMessage({
         type: 'error',
-        text: err?.message || 'Gagal memulihkan data dari Google Drive.'
+        text: err?.message || 'Gagal memulihkan data dari Firebase.'
       });
     } finally {
       setIsSyncingDownload(false);
@@ -352,10 +339,10 @@ export const CloudSyncModal: React.FC<CloudSyncModalProps> = ({
             </div>
             <div>
               <h2 id="cloud-dialog-title" className="text-lg font-bold text-[#E2E2E2] flex items-center gap-2 font-serif-title">
-                Cloud Save Google Drive
+                Cloud Save
               </h2>
               <p className="text-xs text-[#8A8D9A]">
-                Simpan & sinkronkan data aplikasi secara privat ke Google Drive
+                Simpan & sinkronkan data aplikasi secara privat ke Google Firebase
               </p>
             </div>
           </div>
@@ -395,15 +382,15 @@ export const CloudSyncModal: React.FC<CloudSyncModalProps> = ({
             <div>
               <h3 className="text-sm font-bold text-amber-300">Konflik data ditemukan</h3>
               <p className="text-[11px] text-amber-100/70 mt-1">
-                Cadangan Drive ({conflictingBackup.data.bookmarks.length} bookmark, {Object.keys(conflictingBackup.data.hafalanRecords).length} progres hafalan) berbeda dari data lokal ({bookmarks.length} bookmark, {Object.keys(hafalanRecords).length} progres hafalan).
+                Cadangan Firebase ({conflictingBackup.data.bookmarks.length} bookmark, {Object.keys(conflictingBackup.data.hafalanRecords).length} progres hafalan) berbeda dari data lokal ({bookmarks.length} bookmark, {Object.keys(hafalanRecords).length} progres hafalan).
               </p>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
               <button onClick={keepLocalData} disabled={isSyncingUpload} className="p-2.5 rounded-xl bg-[#D4AF37] text-[#0A0A0B] text-xs font-bold disabled:opacity-50 cursor-pointer">
                 Pertahankan Data Lokal
               </button>
-              <button onClick={useDriveData} disabled={isSyncingUpload} className="p-2.5 rounded-xl bg-[#1A1C23] border border-amber-700/50 text-amber-200 text-xs font-bold disabled:opacity-50 cursor-pointer">
-                Gunakan Data Google Drive
+              <button onClick={useCloudData} disabled={isSyncingUpload} className="p-2.5 rounded-xl bg-[#1A1C23] border border-amber-700/50 text-amber-200 text-xs font-bold disabled:opacity-50 cursor-pointer">
+                Gunakan Data Firebase
               </button>
             </div>
           </div>
@@ -428,7 +415,7 @@ export const CloudSyncModal: React.FC<CloudSyncModalProps> = ({
               <div>
                 <div className="flex items-center gap-2">
                   <span className="text-xs font-bold text-[#E2E2E2]">
-                    {userProfile?.name || 'Google Drive'}
+                    {userProfile?.name || 'Google Firebase'}
                   </span>
                   <span
                     className={`text-[10px] px-2 py-0.5 rounded-full font-semibold border ${
@@ -475,10 +462,7 @@ export const CloudSyncModal: React.FC<CloudSyncModalProps> = ({
           <div className="pt-3 border-t border-[#1F2128] flex items-center justify-between text-[11px] text-[#8A8D9A]">
             <span className="flex items-center gap-1.5">
               <Lock className="w-3.5 h-3.5 text-[#D4AF37]" />
-              <span>Privasi Aman (Hanya membaca file aplikasi di Drive Anda)</span>
-            </span>
-            <span className="text-[10px] text-[#6A6D7A] hidden sm:inline">
-              murottal_quran_cloud_backup.json
+              <span>Backup privat dengan Firebase Security Rules</span>
             </span>
           </div>
         </div>
@@ -545,7 +529,7 @@ export const CloudSyncModal: React.FC<CloudSyncModalProps> = ({
             {/* Backup Button */}
             <button
               onClick={handleUploadBackup}
-              disabled={isSyncingUpload || isSyncingDownload || !!conflictingBackup}
+              disabled={isCheckingCloudFile || isLoadingAuth || isSyncingUpload || isSyncingDownload || !!conflictingBackup}
               className="flex items-center justify-center gap-2 p-3.5 rounded-2xl bg-[#D4AF37] hover:bg-[#E5C358] text-[#0A0A0B] font-bold text-xs shadow-lg transition cursor-pointer disabled:opacity-50"
             >
               {isSyncingUpload ? (
@@ -553,13 +537,13 @@ export const CloudSyncModal: React.FC<CloudSyncModalProps> = ({
               ) : (
                 <CloudUpload className="w-4 h-4" />
               )}
-              <span>Cadangkan ke Google Drive</span>
+              <span>Cadangkan ke Firebase</span>
             </button>
 
             {/* Restore Button */}
             <button
               onClick={handleRestoreBackup}
-              disabled={isSyncingUpload || isSyncingDownload || !token || !!conflictingBackup}
+              disabled={isCheckingCloudFile || isLoadingAuth || isSyncingUpload || isSyncingDownload || !token || !!conflictingBackup}
               className="flex items-center justify-center gap-2 p-3.5 rounded-2xl bg-[#1A1C23] hover:bg-[#2A2D35] text-[#E2E2E2] border border-[#2A2D35] font-semibold text-xs transition cursor-pointer disabled:opacity-40"
             >
               {isSyncingDownload ? (
@@ -567,7 +551,7 @@ export const CloudSyncModal: React.FC<CloudSyncModalProps> = ({
               ) : (
                 <CloudDownload className="w-4 h-4 text-[#D4AF37]" />
               )}
-              <span>Pulihkan dari Google Drive</span>
+              <span>Pulihkan dari Firebase</span>
             </button>
           </div>
 
@@ -576,7 +560,7 @@ export const CloudSyncModal: React.FC<CloudSyncModalProps> = ({
             <div className="p-3 rounded-xl bg-[#0F1115] border border-[#2A2D35] flex items-center justify-between text-[11px] text-[#8A8D9A]">
               <span className="flex items-center gap-2">
                 <FileJson className="w-3.5 h-3.5 text-[#D4AF37]" />
-                <span>Berkas di Drive: <strong className="text-[#E2E2E2]">murottal_quran_cloud_backup.json</strong></span>
+                <span>Cadangan Firebase: <strong className="text-[#E2E2E2]">users/UID/backups/current</strong></span>
               </span>
               <span>{formatTimestamp(cloudFileInfo.modifiedTime)}</span>
             </div>

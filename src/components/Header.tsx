@@ -100,7 +100,7 @@ export const Header: React.FC<HeaderProps> = ({
 
           {/* Actions & Utilities */}
           <div className="flex items-center gap-2">
-            {/* Google Drive Cloud Save button */}
+            {/* Firebase Cloud Save button */}
             <button
               onClick={onOpenCloudSync}
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold border transition cursor-pointer ${
@@ -108,7 +108,7 @@ export const Header: React.FC<HeaderProps> = ({
                   ? 'bg-emerald-950/30 border-emerald-700/50 text-emerald-300 hover:bg-emerald-900/40'
                   : 'bg-[#15171E] hover:bg-[#1A1C23] text-[#D4AF37] border-[#2A2D35]'
               }`}
-              title="Cloud Save Google Drive (Sinkronkan Data)"
+              title="Cloud Save Firebase (Sinkronkan Data)"
             >
               <Cloud className="w-4 h-4 text-[#D4AF37]" />
               <span className="hidden sm:inline">

@@ -37,7 +37,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
           </button>
         </div>
 
-        {/* Cloud Sync Google Drive Banner */}
+        {/* Cloud Sync Firebase Banner */}
         {onOpenCloudSync && (
           <div className="p-4 rounded-2xl bg-linear-to-r from-[#D4AF37]/15 to-[#D4AF37]/5 border border-[#D4AF37]/30 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div className="flex items-center gap-3">
@@ -46,7 +46,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               </div>
               <div>
                 <h4 className="text-xs font-bold text-[#E2E2E2] flex items-center gap-1.5">
-                  <span>Cloud Save Google Drive</span>
+                  <span>Cloud Save Firebase</span>
                   <Sparkles className="w-3 h-3 text-[#D4AF37]" />
                 </h4>
                 <p className="text-[10px] text-[#8A8D9A]">

@@ -26,13 +26,14 @@ import {
   DEFAULT_SETTINGS
 } from './services/storageService';
 import {
-  getStoredAccessToken,
-  getStoredGoogleUser,
+  subscribeCloudAuth,
+  getCurrentUserId,
+  getCurrentGoogleUser,
   uploadCloudBackup,
   findCloudBackupFile,
   buildBackupPayload,
   getStoredLastSyncedAt
-} from './services/googleDriveService';
+} from './services/firebaseCloudService';
 
 import { Header, MainTabType } from './components/Header';
 import { SurahList } from './components/SurahList';
@@ -64,7 +65,7 @@ export default function App() {
 
   // Cloud Sync state
   const [isCloudSyncOpen, setIsCloudSyncOpen] = useState<boolean>(false);
-  const [isCloudConnected, setIsCloudConnected] = useState<boolean>(!!getStoredAccessToken());
+  const [isCloudConnected, setIsCloudConnected] = useState<boolean>(!!getCurrentUserId());
 
   // Modals & Popups
   const [isSettingsOpen, setIsSettingsOpen] = useState<boolean>(false);
@@ -107,10 +108,12 @@ export default function App() {
     saveStoredSettings(settings);
   }, [settings]);
 
-  // Debounced automatic sync whenever Google Drive is connected.
+  useEffect(() => subscribeCloudAuth((uid) => setIsCloudConnected(!!uid)), []);
+
+  // Debounced automatic sync whenever Firebase is connected.
   useEffect(() => {
-    const token = getStoredAccessToken();
-    if (!token) return;
+    const token = getCurrentUserId();
+    if (!token || isCloudSyncOpen) return;
 
     const timer = setTimeout(() => {
       const payload = buildBackupPayload(
@@ -118,28 +121,28 @@ export default function App() {
         bookmarks,
         hafalanRecords,
         lastRead,
-        getStoredGoogleUser()?.email
+        getCurrentGoogleUser()?.email
       );
       findCloudBackupFile(token)
         .then((file) => {
           const lastSyncedAt = getStoredLastSyncedAt();
           const cloudChangedSinceLastSync = file && (
-            !lastSyncedAt || new Date(file.modifiedTime).getTime() > new Date(lastSyncedAt).getTime() + 1000
+            !lastSyncedAt || file.modifiedTime !== lastSyncedAt
           );
           if (cloudChangedSinceLastSync) {
             setIsCloudSyncOpen(true);
             return;
           }
-          return uploadCloudBackup(token, payload, file?.id);
+          return uploadCloudBackup(token, payload, file?.modifiedTime ?? null);
         })
         .catch((e) => {
           console.warn('Background auto-sync failed:', e);
-          if (!getStoredAccessToken()) setIsCloudConnected(false);
+          if (!getCurrentUserId()) setIsCloudConnected(false);
         });
     }, 4000);
 
     return () => clearTimeout(timer);
-  }, [bookmarks, hafalanRecords, settings, lastRead]);
+  }, [bookmarks, hafalanRecords, settings, lastRead, isCloudConnected, isCloudSyncOpen]);
 
   // Sync HTML5 Audio element
   useEffect(() => {
@@ -658,7 +661,7 @@ export default function App() {
         isOpen={isCloudSyncOpen}
         onClose={() => {
           setIsCloudSyncOpen(false);
-          setIsCloudConnected(!!getStoredAccessToken());
+          setIsCloudConnected(!!getCurrentUserId());
         }}
         settings={settings}
         bookmarks={bookmarks}
