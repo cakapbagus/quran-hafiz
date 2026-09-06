@@ -16,6 +16,7 @@ import {
   ChevronUp
 } from 'lucide-react';
 import { UserSettings, LastRead } from '../types';
+import packageInfo from '../../package.json';
 
 export type MainTabType = 'read' | 'hafalan' | 'ujian' | 'tajwid' | 'bookmark' | 'progress';
 
@@ -70,9 +71,7 @@ export const Header: React.FC<HeaderProps> = ({
             <div>
               <h1 className="text-lg sm:text-xl font-bold tracking-wide text-[#D4AF37] font-serif-title flex items-center gap-2">
                 Quran Hafiz
-                {import.meta.env.VITE_APP_VERSION && (
-                  <span className="text-xs text-[#8A8D9A] font-sans font-normal ml-0.5">v{import.meta.env.VITE_APP_VERSION}</span>
-                )}
+                <span className="text-xs text-[#8A8D9A] font-sans font-normal ml-0.5">v{packageInfo.version}</span>
               </h1>
             </div>
           </div>

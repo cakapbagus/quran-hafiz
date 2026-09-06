@@ -26,6 +26,40 @@ npm run dev
 
 Buka `http://localhost:5173`.
 
+## Dukungan offline (PWA)
+
+Build produksi menyimpan HTML, JavaScript, CSS, dan logo menggunakan Service
+Worker. Buka aplikasi dengan internet terlebih dahulu dan tunggu pemuatan selesai;
+setelah itu aplikasi dapat dibuka ulang atau di-refresh tanpa internet.
+Service Worker memerlukan HTTPS (atau localhost), dan tidak aktif di `npm run dev`.
+Untuk mencoba lokal: `npm run build` lalu `npm run preview`.
+
+### Menginstal aplikasi
+
+Banner instalasi ditampilkan ketika browser dan perangkat mendukung instalasi PWA.
+Banner tidak ditampilkan jika aplikasi sudah terpasang. Jika ditutup, banner akan
+muncul kembali setelah tujuh hari; penyimpanan dismissal dipisahkan per versi aplikasi.
+
+- Chrome/Edge desktop dan Chrome Android: pilih **Instal aplikasi** pada banner,
+  lalu konfirmasi prompt instalasi browser.
+- Safari iPhone/iPad: pilih tombol **Bagikan**, lalu **Tambahkan ke Layar Utama**.
+  iOS tidak menyediakan prompt instalasi otomatis, sehingga banner menampilkan
+  petunjuk tersebut.
+
+- Buka surah saat online untuk menyimpan teks dan terjemahannya di IndexedDB.
+  Surah tersimpan tetap dapat dibaca offline, termasuk cache lebih dari tujuh hari.
+- Bookmark, pengaturan, progres hafalan, dan rekaman lokal tetap tersimpan di browser.
+- Surah yang belum dibuka, audio murottal streaming, dan Google Drive memerlukan
+  internet. Seluruh Al-Quran dan audio **tidak** diunduh otomatis.
+- Font eksternal dicache setelah dimuat; jika belum tersedia, font sistem digunakan.
+- Menghapus data situs/cache atau penggusuran penyimpanan oleh browser dapat
+  menghilangkan data offline. Cache bukan pengganti backup.
+- Pembaruan aplikasi diaktifkan setelah semua tab aplikasi lama ditutup dan aplikasi
+  dibuka kembali, agar sesi hafalan/rekaman tidak terputus karena reload otomatis.
+
+Pengujian browser (`npm run test:e2e`) memakai build produksi agar Service Worker
+ikut diuji.
+
 ## Deploy ke Vercel
 
 1. Install Vercel CLI (opsional, bisa juga lewat dashboard/import GitHub repo):

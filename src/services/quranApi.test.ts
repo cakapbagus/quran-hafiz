@@ -29,7 +29,31 @@ describe('Quran IndexedDB cache', () => {
     await deleteDatabase();
   });
 
-  afterEach(() => vi.restoreAllMocks());
+  afterEach(() => { vi.restoreAllMocks(); vi.unstubAllGlobals(); });
+
+  it('serves expired cached surahs offline without fetching', async () => {
+    localStorage.setItem('murottal_quran_surah_v3_1', JSON.stringify({ cachedAt: 1, data: detail }));
+    vi.spyOn(navigator, 'onLine', 'get').mockReturnValue(false);
+    const fetchMock = vi.fn();
+    vi.stubGlobal('fetch', fetchMock);
+    expect(await fetchSurahDetail(1)).toEqual(detail);
+    expect(await fetchSurahDetail(1)).toEqual(detail);
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it('uses expired data when both APIs fail despite reporting online', async () => {
+    localStorage.setItem('murottal_quran_surah_v3_1', JSON.stringify({ cachedAt: 1, data: detail }));
+    vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new TypeError('Network failed')));
+    expect(await fetchSurahDetail(1)).toEqual(detail);
+  });
+
+  it('explains how to make an uncached surah available offline', async () => {
+    vi.spyOn(navigator, 'onLine', 'get').mockReturnValue(false);
+    const fetchMock = vi.fn();
+    vi.stubGlobal('fetch', fetchMock);
+    await expect(fetchSurahDetail(1)).rejects.toThrow('Surah ini belum tersimpan');
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
 
   it('migrates a valid legacy cache and subsequently avoids the network', async () => {
     localStorage.setItem('murottal_quran_surah_v3_1', JSON.stringify({ cachedAt: Date.now(), data: detail }));

@@ -1,7 +1,7 @@
 {
   "name": "quran-hafiz",
   "private": true,
-  "version": "0.2.0",
+  "version": "0.2.1",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -32,6 +32,7 @@
     "tailwindcss": "^4.1.14",
     "typescript": "~5.8.2",
     "vite": "^6.2.3",
+    "vite-plugin-pwa": "^0.21.2",
     "vitest": "^4.1.11"
   }
 }

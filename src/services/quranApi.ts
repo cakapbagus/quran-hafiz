@@ -55,21 +55,31 @@ export async function clearQuranCache(): Promise<void> {
 
 export async function fetchSurahDetail(surahNumber: number, signal?: AbortSignal): Promise<SurahDetail> {
   const cacheKey = `${CACHE_PREFIX}${surahNumber}`;
+  let staleData: SurahDetail | undefined;
   
   try {
     const cached = await readCache(cacheKey);
-    if (cached?.data?.ayat?.length && Date.now() - cached.cachedAt < CACHE_TTL_MS) return cached.data;
+    if (cached?.data?.ayat?.length) {
+      staleData = cached.data;
+      if (!navigator.onLine || Date.now() - cached.cachedAt < CACHE_TTL_MS) return cached.data;
+    }
     const legacy = localStorage.getItem(cacheKey);
     if (legacy) {
       const parsed = JSON.parse(legacy) as CacheEntry;
-      localStorage.removeItem(cacheKey);
-      if (parsed?.data?.ayat?.length && Date.now() - parsed.cachedAt < CACHE_TTL_MS) {
+      if (parsed?.data?.ayat?.length) {
+        staleData ??= parsed.data;
         await writeCache({ key: cacheKey, cachedAt: parsed.cachedAt, data: parsed.data });
-        return parsed.data;
+        localStorage.removeItem(cacheKey);
+        if (!navigator.onLine || Date.now() - parsed.cachedAt < CACHE_TTL_MS) return parsed.data;
       }
     }
   } catch (error) {
     console.warn('Failed to read Quran cache:', error);
+  }
+
+  if (!navigator.onLine) {
+    if (staleData) return staleData;
+    throw new Error('Surah ini belum tersimpan. Hubungkan internet dan buka surah ini terlebih dahulu agar tersedia offline.');
   }
 
   try {
@@ -87,7 +97,13 @@ export async function fetchSurahDetail(surahNumber: number, signal?: AbortSignal
   } catch (err) {
     if (signal?.aborted) throw err;
     console.warn(`Primary equran.id fetch failed for Surah ${surahNumber}, trying secondary fallback...`, err);
-    return await fetchFallbackSurahDetail(surahNumber, signal);
+    try {
+      return await fetchFallbackSurahDetail(surahNumber, signal);
+    } catch (fallbackError) {
+      if (signal?.aborted) throw fallbackError;
+      if (staleData) return staleData;
+      throw fallbackError;
+    }
   }
 }
 
