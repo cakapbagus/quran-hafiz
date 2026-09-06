@@ -95,6 +95,7 @@ export const CloudSyncModal: React.FC<CloudSyncModalProps> = ({
 
   const [cloudFileInfo, setCloudFileInfo] = useState<{ id: string; modifiedTime: string; size?: number } | null>(null);
   const [isCheckingCloudFile, setIsCheckingCloudFile] = useState<boolean>(false);
+  const [isDeletingCloud, setIsDeletingCloud] = useState<boolean>(false);
 
   const [statusMessage, setStatusMessage] = useState<{ type: 'success' | 'error' | 'info'; text: string } | null>(null);
   const [conflictingBackup, setConflictingBackup] = useState<CloudBackupPayload | null>(null);
@@ -305,8 +306,6 @@ export const CloudSyncModal: React.FC<CloudSyncModalProps> = ({
       setIsSyncingDownload(false);
     }
   };
-
-  const [isDeletingCloud, setIsDeletingCloud] = useState<boolean>(false);
 
   // Handle Unlink & Delete Cloud Data
   const handleUnlinkAndDeleteCloudData = async () => {
