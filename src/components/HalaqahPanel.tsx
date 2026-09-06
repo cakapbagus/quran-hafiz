@@ -102,9 +102,9 @@ export function HalaqahPanel({ teacherMode }: { teacherMode: boolean }) {
             if (n !== null) void act(() => renameStudent(s, n));
           }}>{s.manual ? 'Edit Nama' : 'Edit Alias'}</button>
           {s.manual ? (
-            <button className={button} disabled={busy || !online} onClick={() => { if (window.confirm('Hapus siswa manual ini dari daftar halaqah? Catatan dan riwayat hafalan tetap tersimpan di database.')) void act(() => archiveManual(s.id)); }}>Hapus Siswa</button>
+            <button className={button} disabled={busy || !online} onClick={() => { if (window.confirm('Hapus siswa manual ini dari daftar halaqah? Catatan dan riwayat hafalan tetap tersimpan di database.')) void act(async () => { await archiveManual(s.id); if (selected?.id === s.id) setSelected(null); }); }}>Hapus Siswa</button>
           ) : (
-            <button className={button} disabled={busy || !online} onClick={() => { if (window.confirm(`Lepas hubungan dengan ${s.name}? Seluruh catatan dan hafalan murid tetap utuh tersimpan di akunnya.`)) void act(() => unlinkStudent(s.id)); }}>Hapus Siswa</button>
+            <button className={button} disabled={busy || !online} onClick={() => { if (window.confirm(`Lepas hubungan dengan ${s.name}? Seluruh catatan dan hafalan murid tetap utuh tersimpan di akunnya.`)) void act(async () => { await unlinkStudent(s.id); if (selected?.id === s.id) setSelected(null); }); }}>Hapus Siswa</button>
           )}
         </div>
       </li>)}</ul>
