@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Scheherazade+New:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Cinzel:wght@500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Scheherazade+New:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Cinzel:wght@500;600;700&family=JetBrains+Mono:wght@500;700;800&display=swap');
 @import "tailwindcss";
 
 :root {
@@ -69,6 +69,11 @@ html.dark, :root.dark {
   letter-spacing: normal;
 }
 
+.font-code {
+  font-family: 'JetBrains Mono', 'Consolas', 'Monaco', 'Courier New', monospace;
+  font-feature-settings: 'zero' 1;
+}
+
 /* Custom Scrollbar */
 ::-webkit-scrollbar {
   width: 6px;
@@ -95,7 +100,9 @@ html.dark, :root.dark {
 }
 
 :root:not(.dark) .bg-\[\#0F1115\],
-:root:not(.dark) .bg-\[\#0f1115\] {
+:root:not(.dark) .bg-\[\#0f1115\],
+:root:not(.dark) .bg-\[\#0D0F14\],
+:root:not(.dark) .bg-\[\#0d0f14\] {
   background-color: var(--bg-surface) !important;
 }
 
@@ -105,7 +112,9 @@ html.dark, :root.dark {
 }
 
 :root:not(.dark) .bg-\[\#15171E\],
-:root:not(.dark) .bg-\[\#15171e\] {
+:root:not(.dark) .bg-\[\#15171e\],
+:root:not(.dark) .bg-\[\#12141A\],
+:root:not(.dark) .bg-\[\#12141a\] {
   background-color: var(--bg-card) !important;
 }
 
@@ -127,12 +136,18 @@ html.dark, :root.dark {
 }
 
 :root:not(.dark) .text-\[\#8A8D9A\],
-:root:not(.dark) .text-\[\#8a8d9a\] {
+:root:not(.dark) .text-\[\#8a8d9a\],
+:root:not(.dark) .text-\[\#9A9DA8\],
+:root:not(.dark) .text-\[\#9a9da8\] {
   color: var(--text-muted) !important;
 }
 
 :root:not(.dark) .text-\[\#6A6D7A\],
-:root:not(.dark) .text-\[\#6a6d7a\] {
+:root:not(.dark) .text-\[\#6a6d7a\],
+:root:not(.dark) .text-\[\#777A86\],
+:root:not(.dark) .text-\[\#777a86\],
+:root:not(.dark) .text-\[\#666975\],
+:root:not(.dark) .text-\[\#666975\] {
   color: var(--text-dim) !important;
 }
 
@@ -147,7 +162,9 @@ html.dark, :root.dark {
 }
 
 :root:not(.dark) .border-\[\#1F2128\],
-:root:not(.dark) .border-\[\#1f2128\] {
+:root:not(.dark) .border-\[\#1f2128\],
+:root:not(.dark) .border-\[\#24262E\],
+:root:not(.dark) .border-\[\#24262e\] {
   border-color: var(--border-subtle) !important;
 }
 

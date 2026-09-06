@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Bookmark } from '../types';
-import { Bookmark as BookmarkIcon, Trash2, ArrowRight, BookOpen, Brain, Tag, Scroll, CheckSquare, Square } from 'lucide-react';
+import { Bookmark as BookmarkIcon, Trash2, BookOpen, Brain, CheckSquare, Square, Pencil, Save, X, Search } from 'lucide-react';
 
 interface BookmarksViewProps {
   bookmarks: Bookmark[];
@@ -8,6 +8,7 @@ interface BookmarksViewProps {
   onRemoveBookmarksBatch?: (items: Array<{ surahNumber: number; verseNumber: number }>) => void;
   onJumpToVerse: (surahNumber: number, verseNumber: number) => void;
   onOpenHafalanForVerse: (surahNumber: number, verseNumber: number) => void;
+  onUpdateBookmarkNote: (bookmark: Bookmark, note: string) => void;
 }
 
 export const BookmarksView: React.FC<BookmarksViewProps> = ({
@@ -15,14 +16,22 @@ export const BookmarksView: React.FC<BookmarksViewProps> = ({
   onRemoveBookmark,
   onRemoveBookmarksBatch,
   onJumpToVerse,
-  onOpenHafalanForVerse
+  onOpenHafalanForVerse,
+  onUpdateBookmarkNote
 }) => {
+  const [editingKey, setEditingKey] = useState<string | null>(null);
+  const [noteDraft, setNoteDraft] = useState('');
   const [filterTag, setFilterTag] = useState<string>('all');
+  const [searchQuery, setSearchQuery] = useState('');
   const [selectedKeys, setSelectedKeys] = useState<Set<string>>(new Set());
 
   const filteredBookmarks = bookmarks.filter((b) => {
-    if (filterTag === 'all') return true;
-    return b.colorTag === filterTag;
+    if (filterTag !== 'all' && b.colorTag !== filterTag) return false;
+    const query = searchQuery.trim().toLocaleLowerCase('id-ID');
+    if (!query) return true;
+    return b.surahName.toLocaleLowerCase('id-ID').includes(query)
+      || (b.note || '').toLocaleLowerCase('id-ID').includes(query)
+      || String(b.verseNumber).includes(query);
   });
 
   const getBookmarkKey = (surahNumber: number, verseNumber: number) => `${surahNumber}_${verseNumber}`;
@@ -78,7 +87,7 @@ export const BookmarksView: React.FC<BookmarksViewProps> = ({
           </div>
           <div>
             <h1 className="text-2xl sm:text-3xl font-bold text-[#D4AF37] font-serif-title">
-              Bookmark & Catatan Simpanan
+              Bookmark
             </h1>
             <p className="text-xs sm:text-sm text-[#8A8D9A]">
               {bookmarks.length} Ayat tersimpan dalam daftar favorit Anda
@@ -88,6 +97,20 @@ export const BookmarksView: React.FC<BookmarksViewProps> = ({
       </div>
 
       {/* Bookmarks List */}
+      {bookmarks.length > 0 && (
+        <div className="relative">
+          <Search className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-[#6A6D7A]" aria-hidden="true" />
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={e => setSearchQuery(e.target.value)}
+            placeholder="Cari nama surah atau catatan…"
+            aria-label="Cari bookmark"
+            className="w-full rounded-xl border border-[#2A2D35] bg-[#15171E] py-2.5 pl-10 pr-10 text-sm text-[#E2E2E2] placeholder-[#6A6D7A] focus:border-[#D4AF37] focus:outline-none focus:ring-1 focus:ring-[#D4AF37]/40"
+          />
+          {searchQuery && <button type="button" onClick={() => setSearchQuery('')} aria-label="Hapus pencarian bookmark" className="absolute right-3 top-1/2 -translate-y-1/2 rounded p-1 text-[#8A8D9A] hover:text-[#E2E2E2]"><X className="h-4 w-4" /></button>}
+        </div>
+      )}
       {bookmarks.length === 0 ? (
         <div className="text-center py-16 bg-[#15171E] rounded-3xl border border-[#1F2128] space-y-3">
           <BookmarkIcon className="w-12 h-12 mx-auto text-[#8A8D9A]" />
@@ -132,6 +155,13 @@ export const BookmarksView: React.FC<BookmarksViewProps> = ({
             )}
           </div>
 
+          {filteredBookmarks.length === 0 && (
+            <div className="rounded-2xl border border-[#1F2128] bg-[#15171E] p-8 text-center">
+              <Search className="mx-auto mb-2 h-8 w-8 text-[#8A8D9A]" />
+              <p className="text-sm font-semibold text-[#E2E2E2]">Bookmark tidak ditemukan</p>
+              <p className="mt-1 text-xs text-[#8A8D9A]">Coba gunakan nama surah atau kata lain dari catatan.</p>
+            </div>
+          )}
           {filteredBookmarks.map((bm) => {
             const isSelected = selectedKeys.has(getBookmarkKey(bm.surahNumber, bm.verseNumber));
             return (
@@ -191,24 +221,20 @@ export const BookmarksView: React.FC<BookmarksViewProps> = ({
                   </div>
                 </div>
 
-                {/* Verse Text Arab */}
-                <div className="text-right py-1">
-                  <p className="font-arabic text-2xl font-bold text-[#E2E2E2] leading-relaxed" dir="rtl">
-                    {bm.verseArab}
-                  </p>
-                </div>
-
-                {/* Verse Translation */}
-                <p className="text-xs text-[#8A8D9A]">
-                  "{bm.verseTranslation}"
-                </p>
-
-                {/* Note if present */}
-                {bm.note && (
-                  <div className="p-3 bg-[#0F1115] rounded-2xl border border-[#2A2D35] text-xs text-[#D4AF37]">
-                    <strong className="block mb-0.5 text-[11px] uppercase tracking-wide opacity-80">Catatan Anda:</strong>
-                    {bm.note}
+                {editingKey === getBookmarkKey(bm.surahNumber, bm.verseNumber) ? (
+                  <div className="space-y-2">
+                    <label className="block text-[11px] font-semibold uppercase tracking-wide text-[#8A8D9A]" htmlFor={`bookmark-note-${bm.id}`}>Catatan</label>
+                    <textarea id={`bookmark-note-${bm.id}`} autoFocus value={noteDraft} onChange={e => setNoteDraft(e.target.value)} rows={3} placeholder="Tambahkan catatan untuk bookmark ini…" className="w-full rounded-xl border border-[#2A2D35] bg-[#0F1115] p-3 text-sm text-[#E2E2E2] focus:border-[#D4AF37] focus:outline-none" />
+                    <div className="flex justify-end gap-2">
+                      <button type="button" onClick={() => setEditingKey(null)} className="flex items-center gap-1 rounded-lg px-3 py-1.5 text-xs text-[#8A8D9A] hover:bg-[#0F1115]"><X className="h-3.5 w-3.5" />Batal</button>
+                      <button type="button" onClick={() => { onUpdateBookmarkNote(bm, noteDraft.trim()); setEditingKey(null); }} className="flex items-center gap-1 rounded-lg bg-[#D4AF37] px-3 py-1.5 text-xs font-bold text-[#0A0A0B]"><Save className="h-3.5 w-3.5" />Simpan</button>
+                    </div>
                   </div>
+                ) : (
+                  <button type="button" onClick={() => { setEditingKey(getBookmarkKey(bm.surahNumber, bm.verseNumber)); setNoteDraft(bm.note || ''); }} className="flex w-full items-start justify-between gap-3 rounded-2xl border border-[#2A2D35] bg-[#0F1115] p-3 text-left text-xs text-[#D4AF37] hover:border-[#D4AF37]/50">
+                    <span>{bm.note || <span className="text-[#8A8D9A]">Belum ada catatan. Klik untuk menambahkan.</span>}</span>
+                    <Pencil className="h-4 w-4 shrink-0" />
+                  </button>
                 )}
               </div>
             );

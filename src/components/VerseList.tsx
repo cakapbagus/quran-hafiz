@@ -21,7 +21,8 @@ import {
   Share2,
   Copy,
   Check,
-  Scroll
+  Scroll,
+  StickyNote
 } from 'lucide-react';
 
 interface VerseListProps {
@@ -40,6 +41,7 @@ interface VerseListProps {
   onNavigateSurah: (surahNumber: number) => void;
   activePlayingVerse: number | null;
   targetVerseNumber?: number | null;
+  onEditVerseNote: (verseNumber: number) => void;
 }
 
 export const VerseList: React.FC<VerseListProps> = ({
@@ -57,7 +59,8 @@ export const VerseList: React.FC<VerseListProps> = ({
   onOpenVoiceRecorder,
   onNavigateSurah,
   activePlayingVerse,
-  targetVerseNumber
+  targetVerseNumber,
+  onEditVerseNote
 }) => {
   const [bookmarkNoteModalVerse, setBookmarkNoteModalVerse] = useState<Verse | null>(null);
   const [noteInput, setNoteInput] = useState('');
@@ -383,6 +386,16 @@ export const VerseList: React.FC<VerseListProps> = ({
                     <Mic className="w-4 h-4" />
                   </button>
 
+                  {/* Verse Note Button */}
+                  <button
+                    onClick={() => onEditVerseNote(verse.nomorAyat)}
+                    className="p-2 rounded-xl border border-[#2A2D35] bg-[#0F1115] text-[#8A8D9A] transition-all cursor-pointer hover:text-[#E2E2E2]"
+                    title="Catatan per Ayat"
+                    aria-label={`Edit catatan ayat ${verse.nomorAyat}`}
+                  >
+                    <StickyNote className={`h-4 w-4 ${hafalanRecord?.notes ? 'text-[#D4AF37]' : ''}`} />
+                  </button>
+
                   {/* Copy Verse */}
                   <button
                     onClick={() => copyVerseToClipboard(verse)}
@@ -533,6 +546,9 @@ export const VerseList: React.FC<VerseListProps> = ({
                     <button onClick={() => handleBookmarkClick(verse)} className={`rounded-xl border p-2 ${bookmarked ? 'border-[#D4AF37] bg-[#D4AF37] text-[#0A0A0B]' : 'border-[#2A2D35] bg-[#0F1115] text-[#8A8D9A]'}`} aria-label={bookmarked ? 'Hapus bookmark' : 'Tambah bookmark'}>
                       <BookmarkIcon className={`h-4 w-4 ${bookmarked ? 'fill-current' : ''}`} />
                     </button>
+                    <button onClick={() => onEditVerseNote(verse.nomorAyat)} className="rounded-xl border border-[#2A2D35] bg-[#0F1115] p-2 text-[#8A8D9A]" aria-label={`Edit catatan ayat ${verse.nomorAyat}`} title="Catatan per Ayat">
+                      <StickyNote className={`h-4 w-4 ${hafalanRecord?.notes ? 'text-[#D4AF37]' : ''}`} />
+                    </button>
                     <button onClick={() => onOpenVoiceRecorder(verse.nomorAyat)} className="rounded-xl border border-[#2A2D35] bg-[#0F1115] p-2 text-[#D4AF37]" aria-label="Rekam suara hafalan">
                       <Mic className="h-4 w-4" />
                     </button>
@@ -602,9 +618,6 @@ export const VerseList: React.FC<VerseListProps> = ({
               Surah {surahDetail.namaLatin} Ayat {bookmarkNoteModalVerse.nomorAyat}
             </p>
 
-            <div className="p-3 bg-[#15171E] rounded-xl text-xs text-[#D4AF37] font-arabic text-right dir-rtl border border-[#2A2D35]">
-              {bookmarkNoteModalVerse.teksArab}
-            </div>
 
             <div>
               <label className="block text-xs font-semibold text-[#8A8D9A] mb-1">

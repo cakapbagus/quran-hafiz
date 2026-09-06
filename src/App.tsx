@@ -50,6 +50,7 @@ import { TajwidGuideView } from './components/TajwidGuideView';
 import { SettingsModal } from './components/SettingsModal';
 import { CloudSyncModal } from './components/CloudSyncModal';
 import { VoiceRecorderModal } from './components/VoiceRecorderModal';
+import { VerseNoteModal } from './components/VerseNoteModal';
 import { AudioPlayerBar } from './components/AudioPlayerBar';
 import { HalaqahPanel } from './components/HalaqahPanel';
 import { saveVerse, watchRecords, type Records } from './services/halaqahService';
@@ -102,6 +103,20 @@ export default function App() {
     setSharedError('');
     void saveVerse({ uid: sharedUid }, { surahNumber, verseNumber, repeatCount: old?.repeatCount || 0, notes: old?.notes || '', status }, old?.revision || 0).catch(error => setSharedError(error.message));
   };
+  const updatePersonalNote = (surahNumber: number, verseNumber: number, notes: string) => {
+    if (!sharedUid) {
+      updateHafalanRecord(surahNumber, verseNumber, { notes });
+      setHafalanRecords(getStoredHafalanRecords());
+      setVerseNoteTarget(null);
+      return;
+    }
+    if (!sharedReady) { setSharedError('Hafalan cloud belum siap.'); return; }
+    const old = sharedRecords[`${surahNumber}_${verseNumber}`];
+    setSharedError('');
+    void saveVerse({ uid: sharedUid }, { surahNumber, verseNumber, repeatCount: old?.repeatCount || 0, notes, status: old?.status || 'not_started' }, old?.revision || 0)
+      .then(() => setVerseNoteTarget(null))
+      .catch(error => setSharedError(error.message));
+  };
   const updateSurahPersonalStatus = async (surahNumber: number, totalVerses: number, status: HafalanStatusType) => {
     if (!sharedUid) {
       updateSurahHafalanRecords(surahNumber, totalVerses, status);
@@ -137,6 +152,7 @@ export default function App() {
   // Modals & Popups
   const [isSettingsOpen, setIsSettingsOpen] = useState<boolean>(false);
   const [voiceRecorderVerse, setVoiceRecorderVerse] = useState<{ surahNumber: number; verseNumber: number } | null>(null);
+  const [verseNoteTarget, setVerseNoteTarget] = useState<{ surahNumber: number; verseNumber: number; surahName: string } | null>(null);
   const [playbackState, setPlaybackState] = useState<AudioPlaybackState>({
     isPlaying: false,
     surahNumber: null,
@@ -492,6 +508,19 @@ export default function App() {
     setBookmarks(getStoredBookmarks());
   };
 
+  const handleUpdateBookmarkNote = (bookmark: Bookmark, note: string) => {
+    saveBookmark({
+      surahNumber: bookmark.surahNumber,
+      surahName: bookmark.surahName,
+      verseNumber: bookmark.verseNumber,
+      verseArab: bookmark.verseArab,
+      verseTranslation: bookmark.verseTranslation,
+      note: note || undefined,
+      colorTag: bookmark.colorTag
+    });
+    setBookmarks(getStoredBookmarks());
+  };
+
   const handleRemoveBookmark = (surahNumber: number, verseNumber: number) => {
     removeBookmark(surahNumber, verseNumber);
     setBookmarks(getStoredBookmarks());
@@ -693,6 +722,7 @@ export default function App() {
                     playbackState.surahNumber === currentSurahDetail.nomor ? playbackState.verseNumber : null
                   }
                   targetVerseNumber={pendingReadActionRef.current?.verseNumber}
+                  onEditVerseNote={(vNum) => setVerseNoteTarget({ surahNumber: currentSurahDetail.nomor, verseNumber: vNum, surahName: currentSurahDetail.namaLatin })}
                 />
               </div>
             ) : null}
@@ -715,6 +745,7 @@ export default function App() {
             onOpenVoiceRecorder={(vNum) =>
               setVoiceRecorderVerse({ surahNumber: currentSurahDetail?.nomor || 67, verseNumber: vNum })
             }
+            onEditVerseNote={(vNum) => setVerseNoteTarget({ surahNumber: currentSurahDetail?.nomor || 67, verseNumber: vNum, surahName: currentSurahDetail?.namaLatin || 'Al-Mulk' })}
           />
         )}
 
@@ -745,6 +776,7 @@ export default function App() {
             onRemoveBookmarksBatch={handleRemoveBookmarksBatch}
             onJumpToVerse={handleJumpToBookmark}
             onOpenHafalanForVerse={handleOpenHafalanForVerse}
+            onUpdateBookmarkNote={handleUpdateBookmarkNote}
           />
         )}
 
@@ -823,6 +855,15 @@ export default function App() {
       )}
 
       {/* Voice Recorder Modal */}
+      {verseNoteTarget && <VerseNoteModal
+        open
+        surahName={verseNoteTarget.surahName}
+        verseNumber={verseNoteTarget.verseNumber}
+        initialNote={hafalanRecords[`${verseNoteTarget.surahNumber}_${verseNoteTarget.verseNumber}`]?.notes || ''}
+        onClose={() => setVerseNoteTarget(null)}
+        onSave={(note) => updatePersonalNote(verseNoteTarget.surahNumber, verseNoteTarget.verseNumber, note)}
+      />}
+
       {voiceRecorderVerse && currentSurahDetail && (
         <VoiceRecorderModal
           surahNumber={voiceRecorderVerse.surahNumber}

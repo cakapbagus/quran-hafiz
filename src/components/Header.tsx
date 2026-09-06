@@ -126,7 +126,7 @@ export const Header: React.FC<HeaderProps> = ({
               className={`flex items-center gap-1.5 p-2 sm:px-3 sm:py-1.5 rounded-xl text-xs font-semibold border transition cursor-pointer ${learningRoomOpen ? 'bg-[#D4AF37] text-[#0A0A0B] border-[#D4AF37]' : 'bg-[#15171E] hover:bg-[#1A1C23] text-[#D4AF37] border-[#2A2D35]'}`}
             >
               <GraduationCap className="w-4 h-4" />
-              <span className="hidden sm:inline">Ruang Belajar</span>
+              <span>Ruang Belajar</span>
             </button>}
 
             {/* Last Read Quick Resume */}

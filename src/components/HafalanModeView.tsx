@@ -12,6 +12,7 @@ import {
   Mic,
   Sliders,
   FileText,
+  StickyNote,
   X
 } from 'lucide-react';
 
@@ -37,6 +38,7 @@ interface HafalanModeViewProps {
   onPauseAudio: () => void;
   activePlayingVerse: number | null;
   onOpenVoiceRecorder: (verseNumber: number) => void;
+  onEditVerseNote: (verseNumber: number) => void;
 }
 
 export const HafalanModeView: React.FC<HafalanModeViewProps> = ({
@@ -50,7 +52,8 @@ export const HafalanModeView: React.FC<HafalanModeViewProps> = ({
   onPlayRangeAudio,
   onPauseAudio,
   activePlayingVerse,
-  onOpenVoiceRecorder
+  onOpenVoiceRecorder,
+  onEditVerseNote
 }) => {
   const [selectedSurahNumber, setSelectedSurahNumber] = useState<number>(currentSurah?.nomor || 67); // Default Al-Mulk
   const [startVerse, setStartVerse] = useState<number>(1);
@@ -455,6 +458,9 @@ export const HafalanModeView: React.FC<HafalanModeViewProps> = ({
                       <option value="review_needed">🟠 Perlu Muroja'ah</option>
                       <option value="memorized">🟢 Mutqin (Lancar)</option>
                     </select>
+                    <button onClick={() => onEditVerseNote(verse.nomorAyat)} className="rounded-xl border border-[#2A2D35] bg-[#0F1115] p-2 text-[#8A8D9A]" aria-label={`Edit catatan ayat ${verse.nomorAyat}`} title="Catatan per Ayat">
+                      <StickyNote className={`h-4 w-4 ${record?.notes ? 'text-[#D4AF37]' : ''}`} />
+                    </button>
                   </div>
                   <div className="flex gap-2">
                     <button
@@ -464,13 +470,13 @@ export const HafalanModeView: React.FC<HafalanModeViewProps> = ({
                     >
                       {isCurrentPlaying ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
                     </button>
-                    <button
+                    {maskType !== 'none' && <button
                       onClick={() => toggleVerseReveal(verse.nomorAyat)}
                       className="rounded-xl border border-[#2A2D35] bg-[#0F1115] p-2 text-[#D4AF37]"
                       aria-label={isRevealed ? `Tutup teks ayat ${verse.nomorAyat}` : `Buka teks ayat ${verse.nomorAyat}`}
                     >
                       {isRevealed ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                    </button>
+                    </button>}
                     <button
                       onClick={() => onOpenVoiceRecorder(verse.nomorAyat)}
                       className="rounded-xl border border-[#2A2D35] bg-[#0F1115] p-2 text-[#D4AF37]"
@@ -555,7 +561,8 @@ export const HafalanModeView: React.FC<HafalanModeViewProps> = ({
             </select>
 
             <div className="flex gap-2">
-              <button
+              <button onClick={() => onEditVerseNote(selectedVerse.nomorAyat)} className="flex items-center justify-center rounded-xl border border-[#2A2D35] bg-[#0F1115] px-3 py-2 text-[#8A8D9A]" aria-label={`Edit catatan ayat ${selectedVerse.nomorAyat}`} title="Catatan per Ayat"><StickyNote className={`h-4 w-4 ${selectedHafalanRecord?.notes ? 'text-[#D4AF37]' : ''}`} /></button>
+              {maskType !== 'none' && <button
                 onClick={() => toggleVerseReveal(selectedVerse.nomorAyat)}
                 className="flex flex-1 items-center justify-center gap-2 rounded-xl border border-[#2A2D35] bg-[#0F1115] px-3 py-2 text-xs font-semibold text-[#E2E2E2] transition hover:border-[#D4AF37]/60 sm:flex-none"
               >
@@ -565,7 +572,7 @@ export const HafalanModeView: React.FC<HafalanModeViewProps> = ({
                   <Eye className="h-4 w-4 text-[#D4AF37]" />
                 )}
                 {(revealedVerses[selectedVerse.nomorAyat] ?? maskType === 'none') ? 'Tutup Teks' : 'Buka Teks'}
-              </button>
+              </button>}
               <button
                 onClick={() => onOpenVoiceRecorder(selectedVerse.nomorAyat)}
                 className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-[#D4AF37] px-3 py-2 text-xs font-bold text-[#0A0A0B] transition hover:bg-[#B8962D] sm:flex-none"
