@@ -73,13 +73,18 @@ export async function updateProfileName(name: string) {
     const pSnap = await tx.get(pRef);
     if (!pSnap.exists()) throw new Error('Profil belum siap.');
     const currentData = pSnap.data() as Profile;
-    tx.update(pRef, { name: trimmed });
+
+    let codeRef = null;
+    let codeExists = false;
     if (currentData.teacherCode) {
-      const codeRef = doc(db, 'teacher_codes', currentData.teacherCode);
+      codeRef = doc(db, 'teacher_codes', currentData.teacherCode);
       const codeSnap = await tx.get(codeRef);
-      if (codeSnap.exists()) {
-        tx.update(codeRef, { teacherName: trimmed });
-      }
+      codeExists = codeSnap.exists();
+    }
+
+    tx.update(pRef, { name: trimmed });
+    if (codeRef && codeExists) {
+      tx.update(codeRef, { teacherName: trimmed });
     }
   });
 }
