@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { signInGoogle, subscribeCloudAuth } from '../services/firebaseCloudService';
-import { flushPending, pendingCount, discardPending, activateTeacher, addManual, archiveManual, changeTeacher, ensureProfile, lookupTeacher, renameStudent, updateProfileName, saveVerse, watchProfile, watchRecords, watchStudents, type Profile, type Records, type Student, type Target } from '../services/halaqahService';
+import { flushPending, pendingCount, discardPending, activateTeacher, addManual, archiveManual, cancelTeacherRequest, changeTeacher, ensureProfile, lookupTeacher, renameStudent, requestTeacher, respondTeacherRequest, updateProfileName, saveVerse, watchConnectionRequest, watchConnectionRequests, watchProfile, watchRecords, watchStudents, type ConnectionRequest, type Profile, type Records, type Student, type Target } from '../services/halaqahService';
 import { ALL_SURAHS } from '../data/surahList';
 import type { HafalanVerseRecord } from '../types';
 
@@ -11,6 +11,8 @@ export function HalaqahPanel({ teacherMode, setTeacherMode }: { teacherMode: boo
   const [profile, setProfile] = useState<Profile | null>(null);
   const [linked, setLinked] = useState<Student[]>([]);
   const [manual, setManual] = useState<Student[]>([]);
+  const [connectionRequest, setConnectionRequest] = useState<ConnectionRequest | null>(null);
+  const [teacherRequests, setTeacherRequests] = useState<ConnectionRequest[]>([]);
   const [selected, setSelected] = useState<Student | null>(null);
   const [filter, setFilter] = useState('all');
   const [pending, setPending] = useState(0);
@@ -19,7 +21,7 @@ export function HalaqahPanel({ teacherMode, setTeacherMode }: { teacherMode: boo
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
   const [online, setOnline] = useState(navigator.onLine);
-  useEffect(() => subscribeCloudAuth(id => { setUid(id); setProfile(null); setLinked([]); setManual([]); setSelected(null); setTeacherMode(false); }), []);
+  useEffect(() => subscribeCloudAuth(id => { setUid(id); setProfile(null); setLinked([]); setManual([]); setConnectionRequest(null); setTeacherRequests([]); setSelected(null); setTeacherMode(false); }), []);
   useEffect(() => { const update = () => setOnline(navigator.onLine); window.addEventListener('online', update); window.addEventListener('offline', update); return () => { window.removeEventListener('online', update); window.removeEventListener('offline', update); }; }, []);
   const fail = (e: Error) => setError(e.message);
   useEffect(() => {
@@ -31,7 +33,8 @@ export function HalaqahPanel({ teacherMode, setTeacherMode }: { teacherMode: boo
   }, [uid]);
   async function act(task: () => Promise<unknown>) { setBusy(true); setError(''); try { await task(); } catch (e) { fail(e instanceof Error ? e : new Error(String(e))); } finally { setBusy(false); } }
   useEffect(() => { if (!uid) return; let active = true; ensureProfile().catch(e => { if (active) fail(e); }); const stop = watchProfile(uid, setProfile, fail); return () => { active = false; stop(); }; }, [uid]);
-  useEffect(() => { if (!uid || !teacherMode || !profile?.teacherCode) return; const a = watchStudents(uid, false, setLinked, fail); const b = watchStudents(uid, true, setManual, fail); return () => { a(); b(); }; }, [uid, teacherMode, profile?.teacherCode]);
+  useEffect(() => { if (!uid) return; return watchConnectionRequest(uid, setConnectionRequest, fail); }, [uid]);
+  useEffect(() => { if (!uid || !teacherMode || !profile?.teacherCode) return; const a = watchStudents(uid, false, setLinked, fail); const b = watchStudents(uid, true, setManual, fail); const c = watchConnectionRequests(uid, setTeacherRequests, fail); return () => { a(); b(); c(); }; }, [uid, teacherMode, profile?.teacherCode]);
   useEffect(() => { if (selected && !(selected.manual ? manual : linked).some(s => s.id === selected.id)) setSelected(null); }, [linked, manual]);
   return <section className="max-w-7xl mx-auto w-full p-4 space-y-3 border-b" aria-label="Mode akun dan halaqah">
     <div className="flex flex-wrap gap-3 items-center"><strong>{teacherMode ? 'Mode Guru / Halaqah' : 'Mode Siswa / Pribadi'}</strong><span>{online ? 'Online' : 'Offline — perubahan cloud memerlukan koneksi'}</span>
@@ -56,18 +59,46 @@ export function HalaqahPanel({ teacherMode, setTeacherMode }: { teacherMode: boo
       </button>
     </div>}
     {uid && profile && !teacherMode && <details><summary className="cursor-pointer">Guru pembimbing: {profile.linkedTeacherName || 'Belum terhubung'}</summary>
-      <div className="flex flex-wrap gap-2 py-3"><label>Kode Guru <input className={input} aria-label="Kode Guru" value={code} maxLength={6} onChange={e => setCode(e.target.value.toUpperCase())} placeholder="A7K9X2" /></label>
-        <button className={button} disabled={busy || !online} onClick={() => void act(async () => { const t = await lookupTeacher(code); if (window.confirm(`Hubungkan ke ${t.teacherName}? Guru ini dapat membaca dan mengedit hafalan Anda. Akses guru lama akan dicabut.`)) { await changeTeacher(t.code); setCode(''); } })}>{profile.linkedTeacherUid ? 'Ganti Guru' : 'Hubungkan Guru'}</button>
+      <div className="space-y-3 py-3">
+        {connectionRequest && <div role="status" className="border rounded-lg p-3">
+          {connectionRequest.status === 'pending' ? <>Permintaan ke <strong>{connectionRequest.teacherName}</strong> menunggu persetujuan guru.</> : <>Permintaan ke <strong>{connectionRequest.teacherName}</strong> diblokir oleh guru.</>}
+          <button className={`${button} ml-2`} disabled={busy || !online} onClick={() => void act(cancelTeacherRequest)}>Batalkan</button>
+        </div>}
+        {!connectionRequest && <div className="flex flex-wrap gap-2"><label>Kode Guru <input className={input} aria-label="Kode Guru" value={code} maxLength={6} onChange={e => setCode(e.target.value.toUpperCase())} placeholder="A7K9X2" /></label>
+          <button className={button} disabled={busy || !online} onClick={() => void act(async () => { const t = await lookupTeacher(code); if (window.confirm(`Kirim permintaan ke ${t.teacherName}? Guru baru memperoleh akses setelah menerima. Hubungan guru lama tetap aktif sampai saat itu.`)) { await requestTeacher(t.code); setCode(''); } })}>{profile.linkedTeacherUid ? 'Minta Ganti Guru' : 'Minta Terhubung'}</button>
+        </div>}
         {profile.linkedTeacherUid && <button className={button} disabled={busy || !online} onClick={() => { if (window.confirm('Putuskan akses guru? Hafalan tetap tersimpan.')) void act(() => changeTeacher(null)); }}>Putuskan Hubungan</button>}
       </div>
     </details>}
     {uid && profile && !teacherMode && <details><summary className="cursor-pointer">Catatan dan setoran hafalan pribadi (sinkron)</summary><VerseEditor key={uid} target={{ uid }} /></details>}
     {uid && profile && teacherMode && <div className="space-y-4 pb-24">
       <p>Kode Guru: <strong className="text-xl tracking-widest">{profile.teacherCode}</strong> <button className={button} onClick={() => void act(() => navigator.clipboard.writeText(profile.teacherCode))}>Salin Kode</button></p>
+      {teacherRequests.length > 0 && <section className="border rounded-xl p-3 space-y-2"><h2 className="font-bold">Permintaan Siswa</h2>{teacherRequests.map(r => <div key={r.studentUid} className="border rounded-lg p-3 flex flex-wrap items-center justify-between gap-2"><span><strong>{r.studentName}</strong> · {r.status === 'blocked' ? 'Diblokir' : 'Menunggu'}</span><div className="flex flex-wrap gap-2">{r.status === 'pending' ? <><button className={button} disabled={busy || !online} onClick={() => void act(() => respondTeacherRequest(r, 'accept'))}>Terima</button><button className={button} disabled={busy || !online} onClick={() => void act(() => respondTeacherRequest(r, 'reject'))}>Tolak</button><button className={button} disabled={busy || !online} onClick={() => { if (window.confirm(`Blokir ${r.studentName}? Murid tidak dapat meminta terhubung lagi sampai blokir dibuka.`)) void act(() => respondTeacherRequest(r, 'block')); }}>Blokir</button></> : <button className={button} disabled={busy || !online} onClick={() => void act(() => respondTeacherRequest(r, 'unblock'))}>Buka Blokir</button>}</div></div>)}</section>}
       <form className="flex flex-wrap gap-2" onSubmit={e => { e.preventDefault(); void act(async () => { await addManual(name); setName(''); }); }}><input className={input} aria-label="Nama siswa manual" value={name} maxLength={100} onChange={e => setName(e.target.value)} placeholder="Nama siswa manual" required /><button className={button} disabled={busy || !online}>Tambah Siswa Manual</button></form>
       <label>Filter siswa <select className={input} value={filter} onChange={e => setFilter(e.target.value)}><option value="all">Semua</option><option value="linked">Akun Terhubung</option><option value="manual">Manual</option></select></label>
       {!linked.length && !manual.length && <p>Belum ada siswa. Bagikan kode atau tambahkan siswa manual.</p>}
-      <ul className="grid sm:grid-cols-2 gap-3">{[...linked, ...manual].filter(s => filter === 'all' || (s.manual ? filter === 'manual' : filter === 'linked')).map(s => <li key={`${s.manual}-${s.id}`} className="border rounded-xl p-3 space-y-2"><strong>{s.name}</strong> <span>{s.manual ? 'Manual' : 'Sync'}</span><div className="flex gap-2 flex-wrap"><button className={button} onClick={() => setSelected(s)}>Simak / Edit Hafalan</button><button className={button} disabled={busy || !online} onClick={() => { const n = window.prompt('Nama siswa', s.name); if (n !== null) void act(() => renameStudent(s, n)); }}>Edit Nama</button>{s.manual && <button className={button} disabled={busy || !online} onClick={() => { if (window.confirm('Arsipkan siswa ini dari daftar?')) void act(() => archiveManual(s.id)); }}>Hapus dari daftar</button>}</div></li>)}</ul>
+      <ul className="grid sm:grid-cols-2 gap-3">{[...linked, ...manual].filter(s => filter === 'all' || (s.manual ? filter === 'manual' : filter === 'linked')).map(s => <li key={`${s.manual}-${s.id}`} className="border rounded-xl p-3 space-y-2">
+        <div className="flex items-baseline justify-between gap-2">
+          <div>
+            <strong>{s.name}</strong>
+            {!s.manual && s.alias && s.originalName && s.alias !== s.originalName && (
+              <span className="text-xs text-zinc-400 block">Nama akun: {s.originalName}</span>
+            )}
+          </div>
+          <span className="text-xs px-2 py-0.5 rounded bg-zinc-800 text-zinc-300 shrink-0">{s.manual ? 'Manual' : 'Sync'}</span>
+        </div>
+        <div className="flex gap-2 flex-wrap">
+          <button className={button} onClick={() => setSelected(s)}>Simak / Edit Hafalan</button>
+          <button className={button} disabled={busy || !online} onClick={() => {
+            const promptMsg = s.manual
+              ? 'Nama siswa:'
+              : `Nama alias siswa (hanya tampil di akun guru, kosongkan untuk reset):`;
+            const n = window.prompt(promptMsg, s.alias || s.name);
+            if (n !== null) void act(() => renameStudent(s, n));
+          }}>{s.manual ? 'Edit Nama' : 'Edit Alias'}</button>
+          {s.manual && <button className={button} disabled={busy || !online} onClick={() => { if (window.confirm('Arsipkan siswa ini dari daftar?')) void act(() => archiveManual(s.id)); }}>Hapus dari daftar</button>}
+        </div>
+      </li>)}</ul>
       {selected && <section className="border rounded-xl p-4"><h2 className="text-xl font-bold">Setoran: {selected.name}</h2><button className={button} onClick={() => setSelected(null)}>Tutup Setoran</button><VerseEditor key={`${selected.manual}-${selected.id}`} target={selected.manual ? { uid, manualId: selected.id } : { uid: selected.id }} /></section>}
     </div>}
   </section>;

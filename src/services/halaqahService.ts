@@ -1,10 +1,11 @@
-import { collection, doc, getDocFromServer, onSnapshot, query, where, runTransaction, setDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, deleteDoc, doc, getDocFromServer, onSnapshot, query, where, runTransaction, setDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
 import { services } from './firebaseCloudService';
 import { ALL_SURAHS } from '../data/surahList';
 import type { HafalanVerseRecord } from '../types';
 
 export interface Profile { name: string; teacherCode: string; linkedTeacherUid: string; linkedTeacherCode: string; linkedTeacherName: string }
-export interface Student { id: string; name: string; manual: boolean }
+export interface Student { id: string; name: string; originalName?: string; alias?: string; manual: boolean }
+export interface ConnectionRequest { studentUid: string; studentName: string; teacherUid: string; teacherCode: string; teacherName: string; status: 'pending' | 'blocked' }
 export interface SharedVerse extends HafalanVerseRecord { revision: number; updatedBy: string }
 export type Records = Record<string, SharedVerse>;
 export type Target = { uid: string; manualId?: string };
@@ -49,20 +50,117 @@ export async function lookupTeacher(input: string) {
   if (teacher.teacherUid === uid) throw new Error('Tidak dapat memilih diri sendiri sebagai guru.');
   return { ...teacher, code };
 }
-export async function changeTeacher(code: string | null) {
+function requestRef(studentUid: string) { return doc(services().db, 'connection_requests', studentUid); }
+export function watchConnectionRequest(uid: string, next: (r: ConnectionRequest | null) => void, error: (e: Error) => void) {
+  return onSnapshot(requestRef(uid), s => next(s.exists() ? s.data() as ConnectionRequest : null), error);
+}
+export function watchConnectionRequests(teacherUid: string, next: (r: ConnectionRequest[]) => void, error: (e: Error) => void) {
+  const db = services().db;
+  let pending: ConnectionRequest[] = [];
+  let blocked: ConnectionRequest[] = [];
+  const emit = () => next([...pending, ...blocked]);
+  const a = onSnapshot(query(collection(db, 'connection_requests'), where('teacherUid', '==', teacherUid)), s => { pending = s.docs.map(d => d.data() as ConnectionRequest); emit(); }, error);
+  const b = onSnapshot(collection(db, 'teachers', teacherUid, 'blocked_students'), s => { blocked = s.docs.map(d => d.data() as ConnectionRequest); emit(); }, error);
+  return () => { a(); b(); };
+}
+export async function requestTeacher(code: string) {
   const { db, uid } = identity();
-  const teacher = code ? await lookupTeacher(code) : null;
+  const teacher = await lookupTeacher(code);
+  const profile = await getDocFromServer(profileRef(uid));
+  if (!profile.exists()) throw new Error('Profil belum siap.');
+  const data = profile.data() as Profile;
+  if (data.linkedTeacherUid === teacher.teacherUid) throw new Error('Anda sudah terhubung dengan guru ini.');
+  const existing = await getDocFromServer(requestRef(uid));
+  const old = existing.data() as ConnectionRequest | undefined;
+  if (old?.status === 'blocked' && old.teacherUid === teacher.teacherUid) throw new Error('Anda diblokir oleh guru ini dan tidak dapat mengirim permintaan baru.');
+  await setDoc(requestRef(uid), { studentUid: uid, studentName: data.name, teacherUid: teacher.teacherUid, teacherCode: teacher.code, teacherName: teacher.teacherName, status: 'pending', requestedAt: serverTimestamp() });
+}
+export async function cancelTeacherRequest() { const { uid } = identity(); await deleteDoc(requestRef(uid)); }
+export async function respondTeacherRequest(request: ConnectionRequest, action: 'accept' | 'reject' | 'block' | 'unblock') {
+  const { db, uid } = identity();
+  if (request.teacherUid !== uid) throw new Error('Permintaan ini bukan untuk Anda.');
+  const ref = requestRef(request.studentUid);
+  if (action === 'reject') { await deleteDoc(ref); return; }
+  const blockedRef = doc(db, 'teachers', uid, 'blocked_students', request.studentUid);
+  if (action === 'unblock') { await deleteDoc(blockedRef); return; }
+  if (action === 'block') {
+    await runTransaction(db, async tx => {
+      const requestSnap = await tx.get(ref);
+      if (!requestSnap.exists() || requestSnap.data().teacherUid !== uid) throw new Error('Permintaan sudah tidak tersedia.');
+      tx.set(blockedRef, { ...request, status: 'blocked' });
+      tx.delete(ref);
+    });
+    return;
+  }
   await runTransaction(db, async tx => {
-    const p = await tx.get(profileRef(uid));
-    if (!p.exists()) throw new Error('Profil belum siap.');
-    if (teacher && p.data().linkedTeacherUid === teacher.teacherUid) throw new Error('Anda sudah terhubung dengan guru ini.');
-    tx.update(profileRef(uid), { linkedTeacherUid: teacher?.teacherUid || '', linkedTeacherCode: teacher?.code || '', linkedTeacherName: teacher?.teacherName || '' });
+    const requestSnap = await tx.get(ref);
+    if (!requestSnap.exists()) throw new Error('Permintaan sudah tidak tersedia.');
+    const current = requestSnap.data() as ConnectionRequest;
+    if (current.teacherUid !== uid || current.status !== 'pending') throw new Error('Permintaan tidak dapat diterima.');
+    const teacherCode = await tx.get(doc(db, 'teacher_codes', current.teacherCode));
+    if (!teacherCode.exists() || teacherCode.data().teacherUid !== uid) throw new Error('Kode guru tidak lagi valid.');
+    tx.update(profileRef(current.studentUid), { linkedTeacherUid: uid, linkedTeacherCode: current.teacherCode, linkedTeacherName: teacherCode.data().teacherName });
+    tx.delete(ref);
   });
+}
+export async function changeTeacher(code: null) {
+  const { db, uid } = identity();
+  if (code !== null) throw new Error('Gunakan permintaan untuk menghubungkan guru.');
+  await updateDoc(profileRef(uid), { linkedTeacherUid: '', linkedTeacherCode: '', linkedTeacherName: '' });
 }
 export function watchStudents(uid: string, manual: boolean, next: (s: Student[]) => void, error: (e: Error) => void) {
   const { db } = services();
-  const q = manual ? query(collection(db, 'teachers', uid, 'manual_students'), where('archived', '==', false)) : query(collection(db, 'halaqah_profiles'), where('linkedTeacherUid', '==', uid));
-  return onSnapshot(q, s => next(s.docs.map(d => ({ id: d.id, name: d.data().name, manual }))), error);
+  if (manual) {
+    const q = query(collection(db, 'teachers', uid, 'manual_students'), where('archived', '==', false));
+    return onSnapshot(q, s => next(s.docs.map(d => ({ id: d.id, name: d.data().name, manual: true }))), error);
+  }
+
+  let profiles: { id: string; name: string }[] = [];
+  let aliases: Record<string, string> = {};
+  let profilesLoaded = false;
+
+  const emit = () => {
+    next(profiles.map(p => {
+      const alias = aliases[p.id]?.trim();
+      return {
+        id: p.id,
+        name: alias || p.name,
+        originalName: p.name,
+        alias: alias || undefined,
+        manual: false,
+      };
+    }));
+  };
+
+  const unsubProfiles = onSnapshot(
+    query(collection(db, 'halaqah_profiles'), where('linkedTeacherUid', '==', uid)),
+    s => {
+      profiles = s.docs.map(d => ({ id: d.id, name: d.data().name || '' }));
+      profilesLoaded = true;
+      emit();
+    },
+    error
+  );
+
+  const unsubAliases = onSnapshot(
+    collection(db, 'teachers', uid, 'student_aliases'),
+    s => {
+      aliases = {};
+      s.docs.forEach(d => {
+        const data = d.data();
+        if (data && typeof data.alias === 'string') {
+          aliases[d.id] = data.alias;
+        }
+      });
+      if (profilesLoaded) emit();
+    },
+    error
+  );
+
+  return () => {
+    unsubProfiles();
+    unsubAliases();
+  };
 }
 function validName(name: string) { if (!name.trim() || name.trim().length > 100) throw new Error('Nama wajib diisi, maksimal 100 karakter.'); return name.trim(); }
 export async function updateProfileName(name: string) {
@@ -89,7 +187,21 @@ export async function updateProfileName(name: string) {
   });
 }
 export async function addManual(name: string) { const { db, uid } = identity(); await setDoc(doc(collection(db, 'teachers', uid, 'manual_students')), { name: validName(name), archived: false }); }
-export async function renameStudent(s: Student, name: string) { const { db, uid } = identity(); await updateDoc(s.manual ? doc(db, 'teachers', uid, 'manual_students', s.id) : profileRef(s.id), { name: validName(name) }); }
+export async function renameStudent(s: Student, name: string) {
+  const { db, uid } = identity();
+  if (s.manual) {
+    await updateDoc(doc(db, 'teachers', uid, 'manual_students', s.id), { name: validName(name) });
+  } else {
+    const trimmed = name.trim();
+    const aliasRef = doc(db, 'teachers', uid, 'student_aliases', s.id);
+    if (!trimmed || (s.originalName && trimmed === s.originalName.trim())) {
+      await deleteDoc(aliasRef);
+    } else {
+      if (trimmed.length > 100) throw new Error('Nama alias maksimal 100 karakter.');
+      await setDoc(aliasRef, { alias: trimmed });
+    }
+  }
+}
 export async function archiveManual(id: string) { const { db, uid } = identity(); await updateDoc(doc(db, 'teachers', uid, 'manual_students', id), { archived: true }); }
 function verses(target: Target) { const { db } = services(); return target.manualId ? collection(db, 'teachers', target.uid, 'manual_students', target.manualId, 'verses') : collection(db, 'learner_records', target.uid, 'verses'); }
 export function watchRecords(target: Target, next: (r: Records) => void, error: (e: Error) => void) { return onSnapshot(verses(target), s => next(Object.fromEntries(s.docs.map(d => [d.id, d.data() as SharedVerse]))), error); }

@@ -15,6 +15,8 @@ import {
   collection,
   getDocFromServer,
   getDocs,
+  query,
+  where,
   writeBatch,
   deleteDoc,
   runTransaction,
@@ -183,6 +185,31 @@ export async function deleteAllUserCloudData(uid: string): Promise<void> {
     }
   } catch (err) {
     console.warn('Gagal membaca manual_students untuk dihapus:', err);
+  }
+
+  // 5. teachers/{uid}/student_aliases/*
+  try {
+    const aliasesSnap = await getDocs(collection(db, 'teachers', uid, 'student_aliases'));
+    aliasesSnap.forEach((d) => refsToDelete.push(d.ref));
+  } catch (err) {
+    console.warn('Gagal membaca student_aliases untuk dihapus:', err);
+  }
+
+  // 6. teachers/{uid}/blocked_students/*
+  try {
+    const blockedSnap = await getDocs(collection(db, 'teachers', uid, 'blocked_students'));
+    blockedSnap.forEach((d) => refsToDelete.push(d.ref));
+  } catch (err) {
+    console.warn('Gagal membaca blocked_students untuk dihapus:', err);
+  }
+
+  // 7. connection_requests owned by this student or addressed to this teacher
+  try {
+    refsToDelete.push(doc(db, 'connection_requests', uid));
+    const requestsSnap = await getDocs(query(collection(db, 'connection_requests'), where('teacherUid', '==', uid)));
+    requestsSnap.forEach((d) => refsToDelete.push(d.ref));
+  } catch (err) {
+    console.warn('Gagal membaca connection_requests untuk dihapus:', err);
   }
 
   // Commit deletion in batches of 400
