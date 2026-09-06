@@ -216,9 +216,9 @@ export const SurahList: React.FC<SurahListProps> = ({
                         <select
                           value={getSurahHafalanStatus(surah.nomor, surah.jumlahAyat, hafalanRecords)}
                           onChange={(e) => {
-                            const val = e.target.value as HafalanStatusType;
+                            const val = e.target.value;
                             if (val !== '-') {
-                              onUpdateSurahHafalanStatus(surah.nomor, surah.jumlahAyat, val);
+                              onUpdateSurahHafalanStatus(surah.nomor, surah.jumlahAyat, val as HafalanStatusType);
                             }
                           }}
                           className="rounded-lg border border-[#2A2D35] bg-[#0F1115] px-2 py-1 text-[10px] font-semibold text-[#8A8D9A] outline-none hover:border-[#D4AF37]/60 focus:border-[#D4AF37] cursor-pointer"

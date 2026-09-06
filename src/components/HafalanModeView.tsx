@@ -256,9 +256,9 @@ export const HafalanModeView: React.FC<HafalanModeViewProps> = ({
                 <select
                   value={getSurahHafalanStatus(currentSurah.nomor, currentSurah.jumlahAyat, hafalanRecords)}
                   onChange={(e) => {
-                    const nextStatus = e.target.value as HafalanStatusType;
+                    const nextStatus = e.target.value;
                     if (nextStatus !== '-') {
-                      onUpdateSurahHafalanStatus(currentSurah.nomor, currentSurah.jumlahAyat, nextStatus);
+                      onUpdateSurahHafalanStatus(currentSurah.nomor, currentSurah.jumlahAyat, nextStatus as HafalanStatusType);
                     }
                   }}
                   className="rounded-lg border border-[#2A2D35] bg-[#0F1115] px-2.5 py-1 text-xs font-semibold text-[#E2E2E2] outline-none focus:border-[#D4AF37] cursor-pointer"

@@ -248,9 +248,9 @@ export const VerseList: React.FC<VerseListProps> = ({
                 <select
                   value={currentSurahHafalanStatus}
                   onChange={(e) => {
-                    const nextStatus = e.target.value as HafalanStatusType;
+                    const nextStatus = e.target.value;
                     if (nextStatus !== '-') {
-                      onUpdateSurahHafalanStatus(surahDetail.nomor, surahDetail.jumlahAyat, nextStatus);
+                      onUpdateSurahHafalanStatus(surahDetail.nomor, surahDetail.jumlahAyat, nextStatus as HafalanStatusType);
                     }
                   }}
                   className="bg-[#0F1115] border border-[#2A2D35] text-[#E2E2E2] font-semibold text-xs rounded-lg px-2.5 py-1 outline-none focus:border-[#D4AF37] cursor-pointer"
