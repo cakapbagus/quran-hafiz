@@ -12,6 +12,7 @@ vi.mock('../services/firebaseCloudService', () => ({
   findCloudBackupFile: vi.fn().mockResolvedValue(null),
   uploadCloudBackup: vi.fn().mockResolvedValue({ id: '123', modifiedTime: '2026-09-06' }),
   deleteCloudBackup: vi.fn().mockResolvedValue(undefined),
+  deleteUserAccount: vi.fn().mockResolvedValue(undefined),
   disconnectCloud: vi.fn().mockResolvedValue(undefined),
   buildBackupPayload: vi.fn(() => ({ data: { settings: DEFAULT_SETTINGS, bookmarks: [], hafalanRecords: {}, lastRead: null } })),
   saveStoredLastSyncedAt: vi.fn()

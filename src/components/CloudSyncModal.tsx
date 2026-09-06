@@ -45,6 +45,7 @@ import {
   uploadCloudBackup,
   downloadCloudBackup,
   deleteCloudBackup,
+  deleteUserAccount,
   buildBackupPayload
 } from '../services/firebaseCloudService';
 
@@ -307,12 +308,12 @@ export const CloudSyncModal: React.FC<CloudSyncModalProps> = ({
     }
   };
 
-  // Handle Unlink & Delete Cloud Data
-  const handleUnlinkAndDeleteCloudData = async () => {
+  // Handle Delete Account & Purge Cloud Data
+  const handleDeleteAccount = async () => {
     if (!token) return;
 
     const confirmed = window.confirm(
-      'PERINGATAN: Tindakan ini akan menghapus seluruh data Anda di cloud Firebase (cadangan, profil, catatan hafalan) secara permanen dan memutuskan akun Google dari perangkat ini. Data lokal Anda tidak akan dihapus. Lanjutkan?'
+      'PERINGATAN: Tindakan ini akan menghapus akun dan seluruh data Anda di Firebase secara permanen. Data lokal di perangkat ini tidak akan dihapus. Jika ingin menautkan kembali nantinya, Anda harus login Google kembali. Lanjutkan?'
     );
     if (!confirmed) return;
 
@@ -321,7 +322,12 @@ export const CloudSyncModal: React.FC<CloudSyncModalProps> = ({
 
     try {
       await deleteCloudBackup(token);
-      await disconnectCloud();
+      try {
+        await deleteUserAccount();
+      } catch (authErr: any) {
+        console.warn('Gagal menghapus akun auth, fallback ke disconnect:', authErr);
+        await disconnectCloud();
+      }
       setToken(null);
       setUserProfile(null);
       setCloudFileInfo(null);
@@ -329,13 +335,13 @@ export const CloudSyncModal: React.FC<CloudSyncModalProps> = ({
       setLastSyncedAt(null);
       setStatusMessage({
         type: 'success',
-        text: 'Seluruh data di cloud Firebase berhasil dihapus dan akun telah diputuskan.'
+        text: 'Akun dan seluruh data di Firebase berhasil dihapus. Silakan login Google kembali jika ingin menautkan.'
       });
     } catch (err: any) {
-      console.error('Delete cloud data failed:', err);
+      console.error('Delete account failed:', err);
       setStatusMessage({
         type: 'error',
-        text: err?.message || 'Gagal menghapus data dari cloud Firebase.'
+        text: err?.message || 'Gagal menghapus akun dari Firebase.'
       });
     } finally {
       setIsDeletingCloud(false);
@@ -604,20 +610,21 @@ export const CloudSyncModal: React.FC<CloudSyncModalProps> = ({
             </div>
           )}
 
-          {/* Unlink & Delete Cloud Data Button */}
+          {/* Delete Account Button */}
           {token && (
             <div className="pt-2">
               <button
-                onClick={handleUnlinkAndDeleteCloudData}
+                onClick={handleDeleteAccount}
                 disabled={isCheckingCloudFile || isLoadingAuth || isSyncingUpload || isSyncingDownload || isDeletingCloud}
                 className="w-full flex items-center justify-center gap-2 p-3 rounded-2xl bg-[#0F1115] border border-red-900/50 text-red-400 font-semibold text-xs hover:bg-red-950/20 transition cursor-pointer disabled:opacity-50"
+                title="Hapus akun dan seluruh data di Firebase"
               >
                 {isDeletingCloud ? (
                   <Loader2 className="w-4 h-4 animate-spin text-red-400" />
                 ) : (
                   <Trash2 className="w-4 h-4 text-red-400" />
                 )}
-                <span>Unlink & Hapus Data di Cloud</span>
+                <span>Hapus Akun</span>
               </button>
             </div>
           )}

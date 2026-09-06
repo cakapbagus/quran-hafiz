@@ -1,5 +1,14 @@
 import { initializeApp, getApps } from 'firebase/app';
-import { getAuth, GoogleAuthProvider, onAuthStateChanged, signInWithPopup, signOut, type Auth } from 'firebase/auth';
+import {
+  getAuth,
+  GoogleAuthProvider,
+  onAuthStateChanged,
+  signInWithPopup,
+  signOut,
+  deleteUser,
+  reauthenticateWithPopup,
+  type Auth
+} from 'firebase/auth';
 import {
   getFirestore,
   doc,
@@ -57,6 +66,22 @@ export async function signInGoogle(): Promise<string> {
 
 export async function disconnectCloud(): Promise<void> {
   await signOut(services().auth);
+}
+
+export async function deleteUserAccount(): Promise<void> {
+  const user = services().auth.currentUser;
+  if (!user) return;
+  try {
+    await deleteUser(user);
+  } catch (err: any) {
+    if (err?.code === 'auth/requires-recent-login') {
+      const provider = new GoogleAuthProvider();
+      await reauthenticateWithPopup(user, provider);
+      await deleteUser(user);
+    } else {
+      throw err;
+    }
+  }
 }
 
 export function getStoredLastSyncedAt(): string | null {
