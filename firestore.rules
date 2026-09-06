@@ -39,6 +39,9 @@ service cloud.firestore {
             && request.resource.data.linkedTeacherName == resource.data.linkedTeacherName)
           || (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['linkedTeacherUid', 'linkedTeacherCode', 'linkedTeacherName'])
             && request.resource.data.linkedTeacherUid == '' && request.resource.data.linkedTeacherCode == '' && request.resource.data.linkedTeacherName == '')))
+        || (signed() && resource.data.linkedTeacherUid == request.auth.uid
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['linkedTeacherUid', 'linkedTeacherCode', 'linkedTeacherName'])
+          && request.resource.data.linkedTeacherUid == '' && request.resource.data.linkedTeacherCode == '' && request.resource.data.linkedTeacherName == '')
         || (signed()
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['linkedTeacherUid', 'linkedTeacherCode', 'linkedTeacherName'])
           && request.resource.data.linkedTeacherUid == request.auth.uid

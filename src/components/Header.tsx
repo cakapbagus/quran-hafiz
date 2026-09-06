@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   BookOpen,
   Brain,
@@ -21,6 +21,8 @@ import packageInfo from '../../package.json';
 export type MainTabType = 'read' | 'hafalan' | 'ujian' | 'tajwid' | 'bookmark' | 'progress';
 
 interface HeaderProps {
+  teacherMode?: boolean;
+  setTeacherMode?: (teacher: boolean) => void;
   activeTab: MainTabType;
   setActiveTab: (tab: MainTabType) => void;
   settings: UserSettings;
@@ -36,6 +38,8 @@ interface HeaderProps {
 }
 
 export const Header: React.FC<HeaderProps> = ({
+  teacherMode = false,
+  setTeacherMode,
   activeTab,
   setActiveTab,
   settings,
@@ -50,6 +54,13 @@ export const Header: React.FC<HeaderProps> = ({
   bookmarksCount
 }) => {
   const [isNavCollapsed, setIsNavCollapsed] = useState(false);
+  const [online, setOnline] = useState(navigator.onLine);
+  useEffect(() => {
+    const update = () => setOnline(navigator.onLine);
+    window.addEventListener('online', update);
+    window.addEventListener('offline', update);
+    return () => { window.removeEventListener('online', update); window.removeEventListener('offline', update); };
+  }, []);
 
   const toggleTheme = () => {
     const nextTheme = settings.theme === 'light' ? 'dark' : 'light';
@@ -60,9 +71,9 @@ export const Header: React.FC<HeaderProps> = ({
     <header className="sticky top-0 z-40 backdrop-blur-md bg-[#0F1115]/95 border-b border-[#1F2128] text-[#E2E2E2] shadow-xl transition-colors">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Top Navbar Row */}
-        <div className="flex items-center justify-between h-16 gap-4">
+        <div className="flex items-center justify-between min-h-16 py-3 gap-3 flex-wrap">
           {/* Logo & Title */}
-          <div className="flex items-center gap-3 cursor-pointer" onClick={() => setActiveTab('read')}>
+          <div className="flex items-center gap-3">
             <img
               src="/quran-hafiz-logo.png"
               alt="Logo Quran Hafiz"
@@ -71,13 +82,19 @@ export const Header: React.FC<HeaderProps> = ({
             <div>
               <h1 className="text-lg sm:text-xl font-bold tracking-wide text-[#D4AF37] font-serif-title flex items-center gap-2">
                 Quran Hafiz
-                <span className="text-xs text-[#8A8D9A] font-sans font-normal ml-0.5">v{packageInfo.version}</span>
+                <span role="status" aria-label={online ? 'Online' : 'Offline'} title={online ? 'Online' : 'Offline'} className={`h-2.5 w-2.5 shrink-0 rounded-full ${online ? 'bg-green-500' : 'bg-red-500'}`} />
               </h1>
+              <div className="flex items-center gap-2 mt-1">
+                <span className="text-xs text-[#8A8D9A]">v{packageInfo.version}</span>
+                <div role="group" aria-label="Mode pengguna" className="flex rounded-lg border border-[#2A2D35] p-0.5 text-xs">
+                  {[false, true].map(teacher => <button key={String(teacher)} type="button" aria-pressed={teacherMode === teacher} onClick={() => setTeacherMode?.(teacher)} className={`rounded-md px-3 py-1 transition ${teacherMode === teacher ? 'bg-[#D4AF37] text-black font-semibold' : 'text-[#8A8D9A] hover:text-white'}`}>{teacher ? 'Guru' : 'Murid'}</button>)}
+                </div>
+              </div>
             </div>
           </div>
 
           {/* Search Bar (When in Read or Hafalan tab) */}
-          {(activeTab === 'read' || activeTab === 'hafalan') && (
+          {!teacherMode && (activeTab === 'read' || activeTab === 'hafalan') && (
             <div className="flex-1 max-w-md hidden md:block relative">
               <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[#6A6D7A]" />
               <input
@@ -120,7 +137,7 @@ export const Header: React.FC<HeaderProps> = ({
             </button>
 
             {/* Last Read Quick Resume */}
-            {lastRead && (
+            {!teacherMode && lastRead && (
               <button
                 onClick={onResumeLastRead}
                 title={`Lanjutkan Surah ${lastRead.surahName} Ayat ${lastRead.verseNumber}`}
@@ -152,7 +169,7 @@ export const Header: React.FC<HeaderProps> = ({
         </div>
 
         {/* Navigation Tabs Bar */}
-        {!isNavCollapsed && (
+        {!teacherMode && !isNavCollapsed && (
         <nav className="flex flex-wrap items-center gap-1.5 sm:gap-2 py-2.5 border-t border-[#1F2128]">
           <button
             onClick={() => setActiveTab('read')}
@@ -244,7 +261,7 @@ export const Header: React.FC<HeaderProps> = ({
         </nav>
         )}
 
-        <div className="flex h-4 items-end justify-end">
+        <div className={`${teacherMode ? 'hidden' : 'flex'} h-4 items-end justify-end`}>
           <button
             type="button"
             onClick={() => setIsNavCollapsed((collapsed) => !collapsed)}

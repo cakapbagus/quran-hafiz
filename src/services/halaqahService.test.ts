@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { generateCode, normalizeCode, validCode, validateVerse, renameStudent, requestTeacher, type Student } from './halaqahService';
+import { generateCode, normalizeCode, validCode, validateVerse, renameStudent, requestTeacher, unlinkStudent, archiveManual, type Student } from './halaqahService';
 import { getDocFromServer, setDoc, updateDoc, deleteDoc } from 'firebase/firestore';
 
 vi.mock('firebase/firestore', () => ({
@@ -104,5 +104,31 @@ describe('Teacher connection requests', () => {
 
     await expect(requestTeacher('A1B2C3')).rejects.toThrow('Anda diblokir oleh guru ini dan tidak dapat mengirim permintaan baru.');
     expect(setDoc).not.toHaveBeenCalled();
+  });
+});
+
+describe('Delete / Unlink Student safely', () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  it('unlinks synced student without deleting their verses or records', async () => {
+    await unlinkStudent('student-456');
+
+    expect(updateDoc).toHaveBeenCalledWith(
+      expect.objectContaining({ path: 'halaqah_profiles/student-456' }),
+      { linkedTeacherUid: '', linkedTeacherCode: '', linkedTeacherName: '' }
+    );
+    expect(deleteDoc).toHaveBeenCalledWith(
+      expect.objectContaining({ path: 'teachers/teacher-123/student_aliases/student-456' })
+    );
+  });
+
+  it('archives manual student to keep their verses intact in subcollections', async () => {
+    await archiveManual('manual-789');
+
+    expect(updateDoc).toHaveBeenCalledWith(
+      expect.objectContaining({ path: 'teachers/teacher-123/manual_students/manual-789' }),
+      { archived: true }
+    );
+    expect(deleteDoc).not.toHaveBeenCalled();
   });
 });

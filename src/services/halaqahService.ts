@@ -110,6 +110,11 @@ export async function changeTeacher(code: null) {
   if (code !== null) throw new Error('Gunakan permintaan untuk menghubungkan guru.');
   await updateDoc(profileRef(uid), { linkedTeacherUid: '', linkedTeacherCode: '', linkedTeacherName: '' });
 }
+export async function unlinkStudent(studentUid: string) {
+  const { db, uid } = identity();
+  await updateDoc(profileRef(studentUid), { linkedTeacherUid: '', linkedTeacherCode: '', linkedTeacherName: '' });
+  await deleteDoc(doc(db, 'teachers', uid, 'student_aliases', studentUid)).catch(() => {});
+}
 export function watchStudents(uid: string, manual: boolean, next: (s: Student[]) => void, error: (e: Error) => void) {
   const { db } = services();
   if (manual) {

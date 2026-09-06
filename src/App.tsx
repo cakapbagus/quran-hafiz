@@ -55,7 +55,17 @@ import { HalaqahPanel } from './components/HalaqahPanel';
 import { saveVerse, watchRecords, type Records } from './services/halaqahService';
 
 export default function App() {
-  const [teacherMode, setTeacherMode] = useState(false);
+  const [teacherMode, updateTeacherMode] = useState(() => window.location.hash === '#/guru');
+  const setTeacherMode = (teacher: boolean) => {
+    window.location.hash = teacher ? '/guru' : '/murid';
+    updateTeacherMode(teacher);
+  };
+  useEffect(() => {
+    const navigate = () => updateTeacherMode(window.location.hash === '#/guru');
+    if (!window.location.hash) window.history.replaceState(null, '', '#/murid');
+    window.addEventListener('hashchange', navigate);
+    return () => window.removeEventListener('hashchange', navigate);
+  }, []);
   const [sharedUid, setSharedUid] = useState<string | null>(null);
   const [sharedRecords, setSharedRecords] = useState<Records>({});
   const [sharedError, setSharedError] = useState('');
@@ -558,7 +568,7 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-(--bg-app) text-(--text-main) font-sans transition-colors duration-300 flex flex-col">
-      <HalaqahPanel teacherMode={teacherMode} setTeacherMode={setTeacherMode} />
+
       {sharedError && <p role="alert" className="p-4 text-red-500">{sharedError}</p>}
       {sharedUid && sharedReady && !teacherMode && <button className="m-4 border rounded-lg p-2" onClick={async () => {
         if (!window.confirm('Impor hafalan lokal lama ke akun ini? Hanya ayat yang belum ada di cloud akan ditambahkan.')) return;
@@ -568,9 +578,10 @@ export default function App() {
           }
         } catch (error) { setSharedError(error instanceof Error ? error.message : String(error)); }
       }}>Impor Hafalan Lokal Lama</button>}
-      <div hidden={teacherMode}>
       {/* Header */}
       <Header
+        teacherMode={teacherMode}
+        setTeacherMode={setTeacherMode}
         activeTab={activeTab}
         setActiveTab={(tab) => {
           setActiveTab(tab);
@@ -590,6 +601,8 @@ export default function App() {
         bookmarksCount={bookmarks.length}
       />
 
+      <HalaqahPanel teacherMode={teacherMode} />
+      <div hidden={teacherMode}>
       {/* Main Body */}
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 pt-6">
         {/* Tab 1: Read Al-Quran (Surah List OR Surah Detail View) */}
