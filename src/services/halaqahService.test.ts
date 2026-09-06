@@ -83,6 +83,7 @@ describe('Teacher connection requests', () => {
     vi.mocked(getDocFromServer)
       .mockResolvedValueOnce({ exists: () => true, data: () => ({ teacherUid: 'teacher-9', teacherName: 'Ustadz Ali' }) } as never)
       .mockResolvedValueOnce({ exists: () => true, data: () => ({ name: 'Murid Satu', linkedTeacherUid: '', linkedTeacherCode: '', linkedTeacherName: '', teacherCode: '' }) } as never)
+      .mockResolvedValueOnce({ exists: () => false, data: () => undefined } as never)
       .mockResolvedValueOnce({ exists: () => false, data: () => undefined } as never);
 
     await requestTeacher('A1B2C3');
@@ -92,5 +93,16 @@ describe('Teacher connection requests', () => {
       expect.objectContaining({ studentUid: 'teacher-123', studentName: 'Murid Satu', teacherUid: 'teacher-9', status: 'pending' })
     );
     expect(updateDoc).not.toHaveBeenCalled();
+  });
+
+  it('rejects connection request if student is blocked by teacher', async () => {
+    vi.mocked(getDocFromServer)
+      .mockResolvedValueOnce({ exists: () => true, data: () => ({ teacherUid: 'teacher-9', teacherName: 'Ustadz Ali' }) } as never)
+      .mockResolvedValueOnce({ exists: () => true, data: () => ({ name: 'Murid Satu', linkedTeacherUid: '', linkedTeacherCode: '', linkedTeacherName: '', teacherCode: '' }) } as never)
+      .mockResolvedValueOnce({ exists: () => false, data: () => undefined } as never)
+      .mockResolvedValueOnce({ exists: () => true, data: () => ({ status: 'blocked' }) } as never);
+
+    await expect(requestTeacher('A1B2C3')).rejects.toThrow('Anda diblokir oleh guru ini dan tidak dapat mengirim permintaan baru.');
+    expect(setDoc).not.toHaveBeenCalled();
   });
 });

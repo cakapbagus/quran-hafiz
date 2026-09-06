@@ -73,6 +73,8 @@ export async function requestTeacher(code: string) {
   const existing = await getDocFromServer(requestRef(uid));
   const old = existing.data() as ConnectionRequest | undefined;
   if (old?.status === 'blocked' && old.teacherUid === teacher.teacherUid) throw new Error('Anda diblokir oleh guru ini dan tidak dapat mengirim permintaan baru.');
+  const blockedDoc = await getDocFromServer(doc(db, 'teachers', teacher.teacherUid, 'blocked_students', uid));
+  if (blockedDoc.exists()) throw new Error('Anda diblokir oleh guru ini dan tidak dapat mengirim permintaan baru.');
   await setDoc(requestRef(uid), { studentUid: uid, studentName: data.name, teacherUid: teacher.teacherUid, teacherCode: teacher.code, teacherName: teacher.teacherName, status: 'pending', requestedAt: serverTimestamp() });
 }
 export async function cancelTeacherRequest() { const { uid } = identity(); await deleteDoc(requestRef(uid)); }
