@@ -6,7 +6,7 @@ import { CloudBackupPayload, GoogleUserProfile, Bookmark, HafalanVerseRecord, Us
 const MAX_BACKUP_BYTES = 900000;
 let auth: Auth | undefined;
 
-function services() {
+export function services() {
   const config = {
     apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
     authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,

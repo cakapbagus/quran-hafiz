@@ -27,8 +27,8 @@ import {
 } from './services/storageService';
 import {
   subscribeCloudAuth,
-  getCurrentUserId,
-  getCurrentGoogleUser,
+  getCurrentUserId as getStoredAccessToken,
+  getCurrentGoogleUser as getStoredGoogleUser,
   uploadCloudBackup,
   findCloudBackupFile,
   buildBackupPayload,
@@ -47,8 +47,15 @@ import { SettingsModal } from './components/SettingsModal';
 import { CloudSyncModal } from './components/CloudSyncModal';
 import { VoiceRecorderModal } from './components/VoiceRecorderModal';
 import { AudioPlayerBar } from './components/AudioPlayerBar';
+import { HalaqahPanel } from './components/HalaqahPanel';
+import { saveVerse, watchRecords, type Records } from './services/halaqahService';
 
 export default function App() {
+  const [teacherMode, setTeacherMode] = useState(false);
+  const [sharedUid, setSharedUid] = useState<string | null>(null);
+  const [sharedRecords, setSharedRecords] = useState<Records>({});
+  const [sharedError, setSharedError] = useState('');
+  const [sharedReady, setSharedReady] = useState(false);
   const [activeTab, setActiveTab] = useState<MainTabType>('read');
   const [selectedSurahNumber, setSelectedSurahNumber] = useState<number | null>(null);
   const [currentSurahDetail, setCurrentSurahDetail] = useState<SurahDetail | null>(null);
@@ -65,7 +72,21 @@ export default function App() {
 
   // Cloud Sync state
   const [isCloudSyncOpen, setIsCloudSyncOpen] = useState<boolean>(false);
-  const [isCloudConnected, setIsCloudConnected] = useState<boolean>(!!getCurrentUserId());
+  const [isCloudConnected, setIsCloudConnected] = useState<boolean>(!!getStoredAccessToken());
+
+  useEffect(() => subscribeCloudAuth(uid => { setSharedUid(uid); setSharedRecords({}); setSharedReady(false); }), []);
+  useEffect(() => {
+    if (!sharedUid) { setHafalanRecords(getStoredHafalanRecords()); return; }
+    setHafalanRecords({});
+    return watchRecords({ uid: sharedUid }, records => { setSharedRecords(records); setHafalanRecords(records); setSharedReady(true); }, error => { setSharedReady(false); setHafalanRecords({}); setSharedError(error.message); });
+  }, [sharedUid]);
+  const updatePersonalStatus = (surahNumber: number, verseNumber: number, status: HafalanVerseRecord['status']) => {
+    if (!sharedUid) { updateHafalanRecord(surahNumber, verseNumber, { status }); setHafalanRecords(getStoredHafalanRecords()); return; }
+    if (!sharedReady) { setSharedError('Hafalan cloud belum siap.'); return; }
+    const old = sharedRecords[`${surahNumber}_${verseNumber}`];
+    setSharedError('');
+    void saveVerse({ uid: sharedUid }, { surahNumber, verseNumber, repeatCount: old?.repeatCount || 0, notes: old?.notes || '', status }, old?.revision || 0).catch(error => setSharedError(error.message));
+  };
 
   // Modals & Popups
   const [isSettingsOpen, setIsSettingsOpen] = useState<boolean>(false);
@@ -108,12 +129,10 @@ export default function App() {
     saveStoredSettings(settings);
   }, [settings]);
 
-  useEffect(() => subscribeCloudAuth((uid) => setIsCloudConnected(!!uid)), []);
-
-  // Debounced automatic sync whenever Firebase is connected.
+  // Debounced automatic sync whenever Google Drive is connected.
   useEffect(() => {
-    const token = getCurrentUserId();
-    if (!token || isCloudSyncOpen) return;
+    const token = getStoredAccessToken();
+    if (!token || sharedUid) return;
 
     const timer = setTimeout(() => {
       const payload = buildBackupPayload(
@@ -121,28 +140,28 @@ export default function App() {
         bookmarks,
         hafalanRecords,
         lastRead,
-        getCurrentGoogleUser()?.email
+        getStoredGoogleUser()?.email
       );
       findCloudBackupFile(token)
         .then((file) => {
           const lastSyncedAt = getStoredLastSyncedAt();
           const cloudChangedSinceLastSync = file && (
-            !lastSyncedAt || file.modifiedTime !== lastSyncedAt
+            !lastSyncedAt || new Date(file.modifiedTime).getTime() > new Date(lastSyncedAt).getTime() + 1000
           );
           if (cloudChangedSinceLastSync) {
             setIsCloudSyncOpen(true);
             return;
           }
-          return uploadCloudBackup(token, payload, file?.modifiedTime ?? null);
+          return uploadCloudBackup(token, payload, file?.id);
         })
         .catch((e) => {
           console.warn('Background auto-sync failed:', e);
-          if (!getCurrentUserId()) setIsCloudConnected(false);
+          if (!getStoredAccessToken()) setIsCloudConnected(false);
         });
     }, 4000);
 
     return () => clearTimeout(timer);
-  }, [bookmarks, hafalanRecords, settings, lastRead, isCloudConnected, isCloudSyncOpen]);
+  }, [bookmarks, hafalanRecords, settings, lastRead]);
 
   // Sync HTML5 Audio element
   useEffect(() => {
@@ -438,8 +457,7 @@ export default function App() {
     status: HafalanVerseRecord['status']
   ) => {
     if (!currentSurahDetail) return;
-    updateHafalanRecord(currentSurahDetail.nomor, verseNumber, { status });
-    setHafalanRecords(getStoredHafalanRecords());
+    updatePersonalStatus(currentSurahDetail.nomor, verseNumber, status);
   };
 
   // Navigation handlers
@@ -492,6 +510,17 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-(--bg-app) text-(--text-main) font-sans transition-colors duration-300 flex flex-col">
+      <HalaqahPanel teacherMode={teacherMode} setTeacherMode={setTeacherMode} />
+      {sharedError && <p role="alert" className="p-4 text-red-500">{sharedError}</p>}
+      {sharedUid && sharedReady && !teacherMode && <button className="m-4 border rounded-lg p-2" onClick={async () => {
+        if (!window.confirm('Impor hafalan lokal lama ke akun ini? Hanya ayat yang belum ada di cloud akan ditambahkan.')) return;
+        try {
+          for (const [key, record] of Object.entries(getStoredHafalanRecords()) as [string, HafalanVerseRecord][]) {
+            if (!sharedRecords[key]) await saveVerse({ uid: sharedUid }, record, 0);
+          }
+        } catch (error) { setSharedError(error instanceof Error ? error.message : String(error)); }
+      }}>Impor Hafalan Lokal Lama</button>}
+      <div hidden={teacherMode}>
       {/* Header */}
       <Header
         activeTab={activeTab}
@@ -539,13 +568,24 @@ export default function App() {
               </div>
             ) : surahLoadError ? (
               <div className="text-center py-24 space-y-4" role="alert">
-                <p className="text-sm font-semibold text-red-500">{surahLoadError}</p>
-                <button
-                  onClick={() => setSurahLoadAttempt((attempt) => attempt + 1)}
-                  className="px-4 py-2 rounded-xl bg-amber-400 text-zinc-950 text-xs font-bold cursor-pointer"
-                >
-                  Coba Lagi
-                </button>
+                <p className="text-sm font-semibold text-red-500 max-w-md mx-auto">{surahLoadError}</p>
+                <div className="flex items-center justify-center gap-3">
+                  <button
+                    onClick={() => {
+                      setSurahLoadError(null);
+                      setSelectedSurahNumber(null);
+                    }}
+                    className="px-4 py-2 rounded-xl bg-white dark:bg-zinc-900 border border-emerald-200 dark:border-zinc-800 text-xs font-semibold text-emerald-800 dark:text-amber-300 hover:bg-emerald-50 dark:hover:bg-zinc-800 transition shadow-sm cursor-pointer"
+                  >
+                    ← Kembali ke Daftar Surah
+                  </button>
+                  <button
+                    onClick={() => setSurahLoadAttempt((attempt) => attempt + 1)}
+                    className="px-4 py-2 rounded-xl bg-amber-400 text-zinc-950 text-xs font-bold hover:bg-amber-300 transition shadow-sm cursor-pointer"
+                  >
+                    Coba Lagi
+                  </button>
+                </div>
               </div>
             ) : currentSurahDetail ? (
               <div>
@@ -604,8 +644,7 @@ export default function App() {
           <ModeUjianTahfidzView
             onMarkVerseReviewNeeded={(sNum, vNum) => {
               if (!sNum) return;
-              updateHafalanRecord(sNum, vNum, { status: 'review_needed' });
-              setHafalanRecords(getStoredHafalanRecords());
+              updatePersonalStatus(sNum, vNum, 'review_needed');
             }}
             onOpenVerseReader={(sNum, vNum) => {
               setSelectedSurahNumber(sNum);
@@ -638,6 +677,7 @@ export default function App() {
         )}
       </main>
 
+      </div>
       {/* Floating Bottom Audio Player Dock */}
       <AudioPlayerBar
         playbackState={playbackState}
@@ -661,7 +701,7 @@ export default function App() {
         isOpen={isCloudSyncOpen}
         onClose={() => {
           setIsCloudSyncOpen(false);
-          setIsCloudConnected(!!getCurrentUserId());
+          setIsCloudConnected(!!getStoredAccessToken());
         }}
         settings={settings}
         bookmarks={bookmarks}

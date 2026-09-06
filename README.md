@@ -110,6 +110,25 @@ pemakaian project. Uji login dan Security Rules pada project Firebase sebelum pr
 Fitur lain (murottal, hafalan, ujian tahfidz, bookmark) berjalan
 penuh tanpa konfigurasi tambahan.
 
+## Mode pribadi dan guru (implementasi awal)
+
+Spesifikasi dan status pekerjaan tersedia di `PRD.md`.
+Login Google, pilih **Mode Guru**, lalu bagikan kode enam karakter huruf/angka.
+Siswa memakai **Guru pembimbing** untuk hubung/ganti/putus guru. Guru dapat
+kembali ke **Murojaah Pribadi** tanpa logout. Hafalan akun disimpan per ayat,
+terpisah dari siswa manual. Gunakan **Impor Hafalan Lokal Lama** secara eksplisit
+untuk menambahkan ayat lokal yang belum ada di akun.
+
+Rules baru perlu diuji melalui emulator sebelum diterbitkan. Belum ada deployment
+otomatis. Listener hanya membuka progres siswa yang dipilih; operasi Firestore
+menggunakan kuota baca/tulis. Kode undangan bukan rahasia autentikasi.
+
+Edit ayat offline yang sudah dimuat masuk antrean lokal berdasarkan UID. Antrean
+mengandung catatan siswa: jangan gunakan perangkat bersama tanpa membersihkannya.
+Konflik versi tidak ditimpa otomatis. Pembuatan siswa manual dan pergantian guru
+masih memerlukan internet. Lihat PRD untuk keterbatasan cache, backup dan isolasi
+penyimpanan lama yang belum selesai; fitur ini belum siap produksi.
+
 ## Struktur proyek
 
 ```

@@ -1,6 +1,65 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
+    function signed() { return request.auth != null; }
+    function owner(uid) { return signed() && request.auth.uid == uid; }
+    function teacher(uid) { return signed() && get(/databases/$(database)/documents/halaqah_profiles/$(uid)).data.linkedTeacherUid == request.auth.uid; }
+    function profileValid(uid) {
+      let d = request.resource.data;
+      return d.keys().hasOnly(['name', 'teacherCode', 'linkedTeacherUid', 'linkedTeacherCode', 'linkedTeacherName'])
+        && d.name is string && d.name.size() > 0 && d.name.size() <= 100
+        && d.teacherCode is string && d.linkedTeacherUid is string
+        && d.linkedTeacherCode is string && d.linkedTeacherName is string
+        && (d.teacherCode == '' || getAfter(/databases/$(database)/documents/teacher_codes/$(d.teacherCode)).data.teacherUid == uid)
+        && ((d.linkedTeacherUid == '' && d.linkedTeacherCode == '' && d.linkedTeacherName == '')
+          || (d.linkedTeacherUid != uid && get(/databases/$(database)/documents/teacher_codes/$(d.linkedTeacherCode)).data.teacherUid == d.linkedTeacherUid
+            && get(/databases/$(database)/documents/teacher_codes/$(d.linkedTeacherCode)).data.teacherName == d.linkedTeacherName));
+    }
+    match /teacher_codes/{code} {
+      allow get: if signed();
+      allow create: if signed() && code.matches('^[A-Z0-9]{6}$') && code.matches('.*[A-Z].*') && code.matches('.*[0-9].*')
+        && request.resource.data.keys().hasOnly(['teacherUid', 'teacherName'])
+        && request.resource.data.teacherUid == request.auth.uid
+        && request.resource.data.teacherName is string && request.resource.data.teacherName.size() <= 100
+        && getAfter(/databases/$(database)/documents/halaqah_profiles/$(request.auth.uid)).data.teacherCode == code
+        && get(/databases/$(database)/documents/halaqah_profiles/$(request.auth.uid)).data.teacherCode == '';
+    }
+    match /halaqah_profiles/{uid} {
+      allow read: if owner(uid) || (signed() && resource.data.linkedTeacherUid == request.auth.uid);
+      allow create: if owner(uid) && profileValid(uid) && request.resource.data.teacherCode == '';
+      allow update: if profileValid(uid) && ((owner(uid)
+        && (resource.data.teacherCode == '' || request.resource.data.teacherCode == resource.data.teacherCode))
+        || (teacher(uid) && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name'])));
+    }
+    function verseValid(key) {
+      let d = request.resource.data;
+      return d.keys().hasOnly(['surahNumber', 'verseNumber', 'status', 'repeatCount', 'notes', 'lastReviewedAt', 'revision', 'updatedBy', 'updatedAt'])
+        && d.surahNumber is int && d.surahNumber >= 1 && d.surahNumber <= 114
+        && d.verseNumber is int && d.verseNumber >= 1 && d.verseNumber <= 286
+        && key == string(d.surahNumber) + '_' + string(d.verseNumber)
+        && d.status in ['not_started', 'in_progress', 'review_needed', 'memorized']
+        && d.repeatCount is int && d.repeatCount >= 0 && d.repeatCount <= 100000
+        && d.notes is string && d.notes.size() <= 2000 && d.lastReviewedAt is string
+        && d.revision is int && d.updatedBy == request.auth.uid && d.updatedAt == request.time;
+    }
+    match /learner_records/{uid}/verses/{key} {
+      allow read: if owner(uid) || teacher(uid);
+      allow create: if (owner(uid) || teacher(uid)) && verseValid(key) && request.resource.data.revision == 1;
+      allow update: if (owner(uid) || teacher(uid)) && verseValid(key) && request.resource.data.revision == resource.data.revision + 1;
+    }
+    match /teachers/{uid}/manual_students/{id} {
+      allow read: if owner(uid);
+      allow create, update: if owner(uid) && request.resource.data.keys().hasOnly(['name', 'archived'])
+        && request.resource.data.name is string && request.resource.data.name.size() > 0 && request.resource.data.name.size() <= 100
+        && request.resource.data.archived is bool;
+      match /verses/{key} {
+        allow read: if owner(uid);
+        allow create: if owner(uid) && verseValid(key) && request.resource.data.revision == 1
+          && get(/databases/$(database)/documents/teachers/$(uid)/manual_students/$(id)).data.archived == false;
+        allow update: if owner(uid) && verseValid(key) && request.resource.data.revision == resource.data.revision + 1
+          && get(/databases/$(database)/documents/teachers/$(uid)/manual_students/$(id)).data.archived == false;
+      }
+    }
     match /users/{uid}/backups/current {
       allow read, delete: if request.auth != null && request.auth.uid == uid;
       allow create, update: if request.auth != null && request.auth.uid == uid
