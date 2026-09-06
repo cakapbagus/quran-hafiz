@@ -40,6 +40,25 @@ async function writeCache(entry: CacheEntry): Promise<void> {
   } finally { db.close(); }
 }
 
+export async function isAllSurahsCached(): Promise<boolean> {
+  const db = await openCacheDb();
+  try {
+    const entries = await new Promise<CacheEntry[]>((resolve, reject) => {
+      const request = db.transaction(CACHE_STORE).objectStore(CACHE_STORE).getAll();
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject(request.error);
+    });
+    const validKeys = new Set(
+      entries
+        .filter((entry) => entry?.data?.ayat?.length)
+        .map((entry) => entry.key)
+    );
+    return ALL_SURAHS.every((surah) => validKeys.has(`${CACHE_PREFIX}${surah.nomor}`));
+  } finally {
+    db.close();
+  }
+}
+
 export async function clearQuranCache(): Promise<void> {
   const db = await openCacheDb();
   try {
@@ -51,6 +70,29 @@ export async function clearQuranCache(): Promise<void> {
     });
   } finally { db.close(); }
   Object.keys(localStorage).filter((key) => key.startsWith(CACHE_PREFIX)).forEach((key) => localStorage.removeItem(key));
+}
+
+export async function downloadAllSurahsToCache(onProgress?: (completed: number, total: number) => void): Promise<void> {
+  if (!navigator.onLine) {
+    throw new Error('Hubungkan perangkat ke internet untuk mengunduh seluruh data surah.');
+  }
+
+  const surahNumbers = ALL_SURAHS.map((surah) => surah.nomor);
+  let nextIndex = 0;
+  let completed = 0;
+  const workerCount = 4;
+
+  const worker = async () => {
+    while (nextIndex < surahNumbers.length) {
+      const surahNumber = surahNumbers[nextIndex++];
+      const data = await fetchSurahDetail(surahNumber);
+      await writeCache({ key: `${CACHE_PREFIX}${surahNumber}`, cachedAt: Date.now(), data });
+      completed++;
+      onProgress?.(completed, surahNumbers.length);
+    }
+  };
+
+  await Promise.all(Array.from({ length: workerCount }, () => worker()));
 }
 
 export async function fetchSurahDetail(surahNumber: number, signal?: AbortSignal): Promise<SurahDetail> {

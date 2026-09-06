@@ -1,14 +1,16 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { useDialogAccessibility } from '../hooks/useDialogAccessibility';
 import { UserSettings } from '../types';
 import { QARIS } from '../data/qaris';
-import { X, Sliders, Type, Volume2, Monitor, Moon, Sun, Trash2, Cloud, Sparkles, BookOpen, Rows3, RotateCcw } from 'lucide-react';
+import { X, Sliders, Type, Volume2, Monitor, Moon, Sun, Trash2, Cloud, Sparkles, BookOpen, Rows3, RotateCcw, Download } from 'lucide-react';
 
 interface SettingsModalProps {
   settings: UserSettings;
   onUpdateSettings: (newSettings: Partial<UserSettings>) => void;
   onClose: () => void;
   onClearCache: () => void;
+  onDownloadAllSurahs: (onProgress: (completed: number, total: number) => void) => Promise<void>;
+  onCheckAllSurahsCached: () => Promise<boolean>;
   onResetProgress?: () => void;
   onOpenCloudSync?: () => void;
 }
@@ -18,10 +20,38 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   onUpdateSettings,
   onClose,
   onClearCache,
+  onDownloadAllSurahs,
+  onCheckAllSurahsCached,
   onResetProgress,
   onOpenCloudSync
 }) => {
   const dialogRef = useDialogAccessibility(onClose);
+  const [cacheDownloadProgress, setCacheDownloadProgress] = useState<{ completed: number; total: number } | null>(null);
+  const [cacheDownloadMessage, setCacheDownloadMessage] = useState('');
+  const [allSurahsCached, setAllSurahsCached] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    let active = true;
+    onCheckAllSurahsCached()
+      .then((cached) => { if (active) setAllSurahsCached(cached); })
+      .catch(() => { if (active) setAllSurahsCached(false); });
+    return () => { active = false; };
+  }, [onCheckAllSurahsCached]);
+
+  const handleDownloadAllSurahs = async () => {
+    setCacheDownloadProgress({ completed: 0, total: 114 });
+    setCacheDownloadMessage('');
+    try {
+      await onDownloadAllSurahs((completed, total) => setCacheDownloadProgress({ completed, total }));
+      setAllSurahsCached(true);
+      setCacheDownloadMessage('Seluruh data surah berhasil disimpan untuk akses offline.');
+    } catch (error) {
+      setCacheDownloadMessage(error instanceof Error ? error.message : 'Gagal mengunduh seluruh data surah.');
+    } finally {
+      setCacheDownloadProgress(null);
+    }
+  };
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fade-in">
       <div ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby="settings-dialog-title" className="bg-[#15171E] rounded-3xl max-w-lg w-full p-6 space-y-6 shadow-2xl border border-[#1F2128] max-h-[90vh] overflow-y-auto">
@@ -242,8 +272,18 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
           </select>
         </div>
 
-        {/* Clear Cache & Reset Progress */}
+        {/* Download All Cache, Clear Cache, & Reset Progress */}
         <div className="pt-2 border-t border-[#1F2128] space-y-2">
+          <button
+            onClick={() => void handleDownloadAllSurahs()}
+            disabled={cacheDownloadProgress !== null || allSurahsCached !== false}
+            className="w-full flex items-center justify-center gap-2 p-3 rounded-2xl bg-[#0F1115] border border-[#D4AF37]/40 text-[#D4AF37] font-semibold text-xs hover:bg-[#D4AF37]/10 transition cursor-pointer disabled:cursor-not-allowed disabled:opacity-70"
+          >
+            <Download className="w-4 h-4" />
+            <span>{cacheDownloadProgress ? `Mengunduh Data Surah (${cacheDownloadProgress.completed}/${cacheDownloadProgress.total})` : allSurahsCached === true ? 'Seluruh Cache Data Surah Telah Diunduh' : allSurahsCached === null ? 'Memeriksa Cache Data Surah...' : 'Download Seluruh Cache Data Surah'}</span>
+          </button>
+          {cacheDownloadMessage && <p role="status" className="px-2 text-center text-[11px] text-[#8A8D9A]">{cacheDownloadMessage}</p>}
+
           <button
             onClick={onClearCache}
             className="w-full flex items-center justify-center gap-2 p-3 rounded-2xl bg-[#0F1115] border border-red-900/50 text-red-400 font-semibold text-xs hover:bg-red-950/20 transition cursor-pointer"

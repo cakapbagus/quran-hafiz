@@ -10,9 +10,9 @@ import {
   UserSettings,
   AudioPlaybackState
 } from './types';
-import { ALL_SURAHS } from './data/surahList';
+
 import { getVerseAudioUrl, QARIS } from './data/qaris';
-import { clearQuranCache, fetchSurahDetail } from './services/quranApi';
+import { clearQuranCache, downloadAllSurahsToCache, fetchSurahDetail, isAllSurahsCached } from './services/quranApi';
 import {
   getStoredSettings,
   saveStoredSettings,
@@ -27,6 +27,7 @@ import {
   clearStoredHafalanRecords,
   getStoredLastRead,
   saveLastRead,
+  clearStoredLastRead,
   restoreStoredDataAtomically,
   DEFAULT_SETTINGS
 } from './services/storageService';
@@ -76,6 +77,35 @@ export default function App() {
   const [sharedReady, setSharedReady] = useState(false);
   const [activeTab, setActiveTab] = useState<MainTabType>('read');
   const [selectedSurahNumber, setSelectedSurahNumber] = useState<number | null>(null);
+
+  useEffect(() => {
+    const historyState = window.history.state as Record<string, unknown> | null;
+    const currentHistoryTab = historyState?.quranMainTab;
+
+    if (activeTab === 'read') {
+      if (currentHistoryTab && currentHistoryTab !== 'read') {
+        window.history.back();
+      } else if (currentHistoryTab !== 'read') {
+        window.history.replaceState({ ...historyState, quranMainTab: 'read' }, '', window.location.href);
+      }
+    } else if (currentHistoryTab === 'read') {
+      window.history.pushState({ ...historyState, quranMainTab: activeTab }, '', window.location.href);
+    } else if (currentHistoryTab !== activeTab) {
+      window.history.replaceState({ ...historyState, quranMainTab: activeTab }, '', window.location.href);
+    }
+  }, [activeTab]);
+
+  useEffect(() => {
+    const handleBackNavigation = (event: PopStateEvent) => {
+      const historyTab = (event.state as Record<string, unknown> | null)?.quranMainTab;
+      const validTabs: MainTabType[] = ['read', 'hafalan', 'ujian', 'tajwid', 'bookmark', 'progress'];
+      setLearningRoomOpen(false);
+      setActiveTab(validTabs.includes(historyTab as MainTabType) ? historyTab as MainTabType : 'read');
+    };
+
+    window.addEventListener('popstate', handleBackNavigation);
+    return () => window.removeEventListener('popstate', handleBackNavigation);
+  }, []);
   const [currentSurahDetail, setCurrentSurahDetail] = useState<SurahDetail | null>(null);
   const [isLoadingSurah, setIsLoadingSurah] = useState<boolean>(false);
   const [surahLoadError, setSurahLoadError] = useState<string | null>(null);
@@ -87,6 +117,12 @@ export default function App() {
   const [bookmarks, setBookmarks] = useState<Bookmark[]>(getStoredBookmarks());
   const [hafalanRecords, setHafalanRecords] = useState<Record<string, HafalanVerseRecord>>(getStoredHafalanRecords());
   const [lastRead, setLastRead] = useState<LastRead | null>(getStoredLastRead());
+
+  useEffect(() => {
+    if (activeTab === 'hafalan') {
+      setSelectedSurahNumber(lastRead?.surahNumber ?? 1);
+    }
+  }, [activeTab]);
 
   // Cloud Sync state
   const [isCloudSyncOpen, setIsCloudSyncOpen] = useState<boolean>(false);
@@ -343,22 +379,7 @@ export default function App() {
         playbackSpeed: speed
       }));
 
-      // Update last read position
-      const surahMeta = ALL_SURAHS.find((s) => s.nomor === surahNum);
-      const newLastRead: LastRead = {
-        surahNumber: surahNum,
-        surahName: surahMeta?.namaLatin || `Surah ${surahNum}`,
-        verseNumber: verseNum,
-        timestamp: new Date().toISOString()
-      };
-      setLastRead(newLastRead);
-      saveLastRead(newLastRead);
 
-      // Auto scroll to verse
-      const elem = document.getElementById(`verse-${surahNum}-${verseNum}`);
-      if (elem) {
-        elem.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      }
     }).catch((e) => {
       console.warn('Audio playback interrupted or failed:', e);
     });
@@ -575,7 +596,27 @@ export default function App() {
   const handleSelectSurah = (surahNum: number) => {
     setSelectedSurahNumber(surahNum);
     setActiveTab('read');
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    window.scrollTo({ top: 0, behavior: 'instant' });
+  };
+
+  const handleMarkLastRead = async (surahNumber: number, verseNumber: number, surahName: string) => {
+    const isActive = lastRead?.surahNumber === surahNumber && lastRead.verseNumber === verseNumber;
+    if (isActive) {
+      const confirmed = await confirmAction(`Hapus tanda dibaca terakhir pada Surah ${surahName} Ayat ${verseNumber}?`);
+      if (!confirmed) return;
+      setLastRead(null);
+      clearStoredLastRead();
+      return;
+    }
+
+    const newLastRead: LastRead = {
+      surahNumber,
+      surahName,
+      verseNumber,
+      timestamp: new Date().toISOString()
+    };
+    setLastRead(newLastRead);
+    saveLastRead(newLastRead);
   };
 
   const handleResumeLastRead = () => {
@@ -729,6 +770,8 @@ export default function App() {
                   }
                   targetVerseNumber={pendingReadActionRef.current?.verseNumber}
                   onEditVerseNote={(vNum) => setVerseNoteTarget({ surahNumber: currentSurahDetail.nomor, verseNumber: vNum, surahName: currentSurahDetail.namaLatin })}
+                  onMarkLastRead={(vNum) => handleMarkLastRead(currentSurahDetail.nomor, vNum, currentSurahDetail.namaLatin)}
+                  lastReadVerseNumber={lastRead?.surahNumber === currentSurahDetail.nomor ? lastRead.verseNumber : null}
                 />
               </div>
             ) : null}
@@ -751,7 +794,9 @@ export default function App() {
             onOpenVoiceRecorder={(vNum) =>
               setVoiceRecorderVerse({ surahNumber: currentSurahDetail?.nomor || 67, verseNumber: vNum })
             }
-            onEditVerseNote={(vNum) => setVerseNoteTarget({ surahNumber: currentSurahDetail?.nomor || 67, verseNumber: vNum, surahName: currentSurahDetail?.namaLatin || 'Al-Mulk' })}
+            onEditVerseNote={(vNum) => setVerseNoteTarget({ surahNumber: currentSurahDetail?.nomor || 1, verseNumber: vNum, surahName: currentSurahDetail?.namaLatin || 'Al-Fatihah' })}
+            onMarkLastRead={(vNum) => handleMarkLastRead(currentSurahDetail?.nomor || 1, vNum, currentSurahDetail?.namaLatin || 'Al-Fatihah')}
+            lastReadVerseNumber={lastRead && lastRead.surahNumber === currentSurahDetail?.nomor ? lastRead.verseNumber : null}
           />
         )}
 
@@ -845,6 +890,8 @@ export default function App() {
           onClose={() => setIsSettingsOpen(false)}
           onOpenCloudSync={() => setIsCloudSyncOpen(true)}
           onUpdateSettings={(newSettings) => setSettings((prev) => ({ ...prev, ...newSettings }))}
+          onDownloadAllSurahs={downloadAllSurahsToCache}
+          onCheckAllSurahsCached={isAllSurahsCached}
           onClearCache={() => {
             clearQuranCache()
               .then(() => window.location.reload())

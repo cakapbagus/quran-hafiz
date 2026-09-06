@@ -22,7 +22,8 @@ import {
   Copy,
   Check,
   Scroll,
-  StickyNote
+  StickyNote,
+  Flag
 } from 'lucide-react';
 
 interface VerseListProps {
@@ -42,6 +43,8 @@ interface VerseListProps {
   activePlayingVerse: number | null;
   targetVerseNumber?: number | null;
   onEditVerseNote: (verseNumber: number) => void;
+  onMarkLastRead: (verseNumber: number) => void;
+  lastReadVerseNumber?: number | null;
 }
 
 export const VerseList: React.FC<VerseListProps> = ({
@@ -60,7 +63,9 @@ export const VerseList: React.FC<VerseListProps> = ({
   onNavigateSurah,
   activePlayingVerse,
   targetVerseNumber,
-  onEditVerseNote
+  onEditVerseNote,
+  onMarkLastRead,
+  lastReadVerseNumber
 }) => {
   const [bookmarkNoteModalVerse, setBookmarkNoteModalVerse] = useState<Verse | null>(null);
   const [noteInput, setNoteInput] = useState('');
@@ -111,8 +116,9 @@ export const VerseList: React.FC<VerseListProps> = ({
   };
 
   const saveBookmarkWithNote = () => {
-    if (bookmarkNoteModalVerse) {
-      onToggleBookmark(bookmarkNoteModalVerse, noteInput.trim() || undefined);
+    const note = noteInput.trim();
+    if (bookmarkNoteModalVerse && note) {
+      onToggleBookmark(bookmarkNoteModalVerse, note);
       setBookmarkNoteModalVerse(null);
     }
   };
@@ -350,6 +356,14 @@ export const VerseList: React.FC<VerseListProps> = ({
                       <Play className="w-4 h-4 fill-current" />
                     )}
                   </button>
+                  <button
+                    onClick={() => onMarkLastRead(verse.nomorAyat)}
+                    className={`p-2 rounded-xl border transition-all cursor-pointer ${lastReadVerseNumber === verse.nomorAyat ? 'border-[#D4AF37] bg-[#D4AF37] text-[#0A0A0B]' : 'border-[#2A2D35] bg-[#0F1115] text-[#8A8D9A] hover:text-[#E2E2E2]'}`}
+                    title="Tandai dibaca terakhir"
+                    aria-label={`Tandai ayat ${verse.nomorAyat} sebagai dibaca terakhir`}
+                  >
+                    <Flag className={`w-4 h-4 ${lastReadVerseNumber === verse.nomorAyat ? 'fill-current' : ''}`} />
+                  </button>
 
                   {/* Bookmark Button */}
                   <button
@@ -393,7 +407,7 @@ export const VerseList: React.FC<VerseListProps> = ({
                     title="Catatan per Ayat"
                     aria-label={`Edit catatan ayat ${verse.nomorAyat}`}
                   >
-                    <StickyNote className={`h-4 w-4 ${hafalanRecord?.notes ? 'text-[#D4AF37]' : ''}`} />
+                    <StickyNote className={`w-4 h-4 ${hafalanRecord?.notes ? 'text-[#D4AF37]' : ''}`} />
                   </button>
 
                   {/* Copy Verse */}
@@ -543,6 +557,9 @@ export const VerseList: React.FC<VerseListProps> = ({
                     <button onClick={() => isCurrentPlaying ? onPauseAudio() : onPlayVerse(verse.nomorAyat)} className={`rounded-xl border p-2 ${isCurrentPlaying ? 'border-[#D4AF37] bg-[#D4AF37] text-[#0A0A0B]' : 'border-[#2A2D35] bg-[#0F1115] text-[#D4AF37]'}`} aria-label={isCurrentPlaying ? 'Jeda audio' : 'Putar audio ayat'}>
                       {isCurrentPlaying ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
                     </button>
+                    <button onClick={() => onMarkLastRead(verse.nomorAyat)} className={`rounded-xl border p-2 ${lastReadVerseNumber === verse.nomorAyat ? 'border-[#D4AF37] bg-[#D4AF37] text-[#0A0A0B]' : 'border-[#2A2D35] bg-[#0F1115] text-[#8A8D9A]'}`} aria-label={`Tandai ayat ${verse.nomorAyat} sebagai dibaca terakhir`} title="Tandai dibaca terakhir">
+                      <Flag className={`h-4 w-4 ${lastReadVerseNumber === verse.nomorAyat ? 'fill-current' : ''}`} />
+                    </button>
                     <button onClick={() => handleBookmarkClick(verse)} className={`rounded-xl border p-2 ${bookmarked ? 'border-[#D4AF37] bg-[#D4AF37] text-[#0A0A0B]' : 'border-[#2A2D35] bg-[#0F1115] text-[#8A8D9A]'}`} aria-label={bookmarked ? 'Hapus bookmark' : 'Tambah bookmark'}>
                       <BookmarkIcon className={`h-4 w-4 ${bookmarked ? 'fill-current' : ''}`} />
                     </button>
@@ -621,11 +638,13 @@ export const VerseList: React.FC<VerseListProps> = ({
 
             <div>
               <label className="block text-xs font-semibold text-[#8A8D9A] mb-1">
-                Catatan Pengingat (Opsional):
+                Catatan:
               </label>
               <textarea
                 value={noteInput}
                 onChange={(e) => setNoteInput(e.target.value)}
+                required
+                aria-required="true"
                 placeholder="Contoh: Setoran hafalan Ba'da Subuh, Muroja'ah ulang..."
                 rows={3}
                 className="w-full p-3 text-sm rounded-xl border border-[#2A2D35] bg-[#15171E] text-[#E2E2E2] placeholder-[#6A6D7A] focus:outline-none focus:border-[#D4AF37]"
@@ -641,7 +660,8 @@ export const VerseList: React.FC<VerseListProps> = ({
               </button>
               <button
                 onClick={saveBookmarkWithNote}
-                className="px-4 py-2 text-xs font-bold rounded-xl bg-[#D4AF37] text-[#0A0A0B] hover:bg-[#B8962D] shadow-md transition cursor-pointer"
+                disabled={!noteInput.trim()}
+                className="px-4 py-2 text-xs font-bold rounded-xl bg-[#D4AF37] text-[#0A0A0B] hover:bg-[#B8962D] shadow-md transition cursor-pointer disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-[#D4AF37]"
               >
                 Simpan Bookmark
               </button>

@@ -215,6 +215,14 @@ export function saveLastRead(lastRead: LastRead): void {
     console.warn('Failed to save last read:', e);
   }
 }
+
+export function clearStoredLastRead(): void {
+  try {
+    localStorage.removeItem(LAST_READ_KEY);
+  } catch (e) {
+    console.warn('Failed to clear last read:', e);
+  }
+}
 export function saveStoredBookmarks(bookmarks: Bookmark[]): void {
   localStorage.setItem(BOOKMARKS_KEY, JSON.stringify(bookmarks));
 }

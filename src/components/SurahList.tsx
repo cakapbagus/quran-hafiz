@@ -1,7 +1,18 @@
-import React, { useState, useMemo } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { ALL_SURAHS } from '../data/surahList';
 import { SurahSummary, LastRead, HafalanVerseRecord } from '../types';
 import { Play, BookOpen, Search, CheckCircle2, Flag } from 'lucide-react';
+
+const SELECTED_JUZ_STORAGE_KEY = 'quran_read_selected_juz';
+
+function getStoredSelectedJuz(): number | null {
+  try {
+    const storedJuz = Number(localStorage.getItem(SELECTED_JUZ_STORAGE_KEY));
+    return Number.isInteger(storedJuz) && storedJuz >= 1 && storedJuz <= 30 ? storedJuz : null;
+  } catch {
+    return null;
+  }
+}
 
 interface SurahListProps {
   onSelectSurah: (surahNumber: number) => void;
@@ -20,8 +31,20 @@ export const SurahList: React.FC<SurahListProps> = ({
   searchQuery,
   setSearchQuery
 }) => {
-  const [selectedJuz, setSelectedJuz] = useState<number | null>(null);
+  const [selectedJuz, setSelectedJuz] = useState<number | null>(getStoredSelectedJuz);
   const [selectedType, setSelectedType] = useState<'all' | 'Mekkah' | 'Madinah'>('all');
+
+  useEffect(() => {
+    try {
+      if (selectedJuz === null) {
+        localStorage.removeItem(SELECTED_JUZ_STORAGE_KEY);
+      } else {
+        localStorage.setItem(SELECTED_JUZ_STORAGE_KEY, String(selectedJuz));
+      }
+    } catch {
+      // The filter remains usable when browser storage is unavailable.
+    }
+  }, [selectedJuz]);
 
   // Filter surahs
   const filteredSurahs = useMemo(() => {

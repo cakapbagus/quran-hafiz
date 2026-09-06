@@ -13,6 +13,7 @@ import {
   Sliders,
   FileText,
   StickyNote,
+  Flag,
   X
 } from 'lucide-react';
 
@@ -39,6 +40,8 @@ interface HafalanModeViewProps {
   activePlayingVerse: number | null;
   onOpenVoiceRecorder: (verseNumber: number) => void;
   onEditVerseNote: (verseNumber: number) => void;
+  onMarkLastRead: (verseNumber: number) => void;
+  lastReadVerseNumber?: number | null;
 }
 
 export const HafalanModeView: React.FC<HafalanModeViewProps> = ({
@@ -53,9 +56,11 @@ export const HafalanModeView: React.FC<HafalanModeViewProps> = ({
   onPauseAudio,
   activePlayingVerse,
   onOpenVoiceRecorder,
-  onEditVerseNote
+  onEditVerseNote,
+  onMarkLastRead,
+  lastReadVerseNumber
 }) => {
-  const [selectedSurahNumber, setSelectedSurahNumber] = useState<number>(currentSurah?.nomor || 67); // Default Al-Mulk
+  const [selectedSurahNumber, setSelectedSurahNumber] = useState<number>(currentSurah?.nomor || 1); // Default Al-Fatihah
   const [startVerse, setStartVerse] = useState<number>(1);
   const [endVerse, setEndVerse] = useState<number>(5);
   const [startVerseInput, setStartVerseInput] = useState('1');
@@ -461,6 +466,9 @@ export const HafalanModeView: React.FC<HafalanModeViewProps> = ({
                     <button onClick={() => onEditVerseNote(verse.nomorAyat)} className="rounded-xl border border-[#2A2D35] bg-[#0F1115] p-2 text-[#8A8D9A]" aria-label={`Edit catatan ayat ${verse.nomorAyat}`} title="Catatan per Ayat">
                       <StickyNote className={`h-4 w-4 ${record?.notes ? 'text-[#D4AF37]' : ''}`} />
                     </button>
+                    <button onClick={() => onMarkLastRead(verse.nomorAyat)} className={`rounded-xl border p-2 ${lastReadVerseNumber === verse.nomorAyat ? 'border-[#D4AF37] bg-[#D4AF37] text-[#0A0A0B]' : 'border-[#2A2D35] bg-[#0F1115] text-[#8A8D9A]'}`} aria-label={`Tandai ayat ${verse.nomorAyat} sebagai dibaca terakhir`} title="Tandai dibaca terakhir">
+                      <Flag className={`h-4 w-4 ${lastReadVerseNumber === verse.nomorAyat ? 'fill-current' : ''}`} />
+                    </button>
                   </div>
                   <div className="flex gap-2">
                     <button
@@ -562,6 +570,7 @@ export const HafalanModeView: React.FC<HafalanModeViewProps> = ({
 
             <div className="flex gap-2">
               <button onClick={() => onEditVerseNote(selectedVerse.nomorAyat)} className="flex items-center justify-center rounded-xl border border-[#2A2D35] bg-[#0F1115] px-3 py-2 text-[#8A8D9A]" aria-label={`Edit catatan ayat ${selectedVerse.nomorAyat}`} title="Catatan per Ayat"><StickyNote className={`h-4 w-4 ${selectedHafalanRecord?.notes ? 'text-[#D4AF37]' : ''}`} /></button>
+              <button onClick={() => onMarkLastRead(selectedVerse.nomorAyat)} className={`flex items-center justify-center rounded-xl border px-3 py-2 ${lastReadVerseNumber === selectedVerse.nomorAyat ? 'border-[#D4AF37] bg-[#D4AF37] text-[#0A0A0B]' : 'border-[#2A2D35] bg-[#0F1115] text-[#8A8D9A]'}`} aria-label={`Tandai ayat ${selectedVerse.nomorAyat} sebagai dibaca terakhir`} title="Tandai dibaca terakhir"><Flag className={`h-4 w-4 ${lastReadVerseNumber === selectedVerse.nomorAyat ? 'fill-current' : ''}`} /></button>
               {maskType !== 'none' && <button
                 onClick={() => toggleVerseReveal(selectedVerse.nomorAyat)}
                 className="flex flex-1 items-center justify-center gap-2 rounded-xl border border-[#2A2D35] bg-[#0F1115] px-3 py-2 text-xs font-semibold text-[#E2E2E2] transition hover:border-[#D4AF37]/60 sm:flex-none"
