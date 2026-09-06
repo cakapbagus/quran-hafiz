@@ -1,5 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { DEFAULT_SETTINGS, getStoredSettings, restoreStoredDataAtomically } from './storageService';
+import {
+  DEFAULT_SETTINGS,
+  getStoredSettings,
+  restoreStoredDataAtomically,
+  getSurahHafalanStatus,
+  updateSurahHafalanRecords,
+  getStoredHafalanRecords
+} from './storageService';
 
 const keys = {
   settings: 'murottal_quran_settings_v1',
@@ -50,5 +57,39 @@ describe('atomic local restore', () => {
     expect(localStorage.getItem(keys.records)).toBe('old-records');
     expect(localStorage.getItem(keys.lastRead)).toBe('old-last-read');
     spy.mockRestore();
+  });
+});
+
+describe('surah hafalan status', () => {
+  beforeEach(() => localStorage.clear());
+
+  it('returns not_started when no verses have records', () => {
+    expect(getSurahHafalanStatus(1, 7, {})).toBe('not_started');
+  });
+
+  it('returns uniform status when all verses match', () => {
+    const records = {
+      '1_1': { surahNumber: 1, verseNumber: 1, status: 'memorized' as const, repeatCount: 1 },
+      '1_2': { surahNumber: 1, verseNumber: 2, status: 'memorized' as const, repeatCount: 1 },
+      '1_3': { surahNumber: 1, verseNumber: 3, status: 'memorized' as const, repeatCount: 1 },
+    };
+    expect(getSurahHafalanStatus(1, 3, records)).toBe('memorized');
+  });
+
+  it('returns "-" when verses have mixed statuses', () => {
+    const records = {
+      '1_1': { surahNumber: 1, verseNumber: 1, status: 'memorized' as const, repeatCount: 1 },
+      '1_2': { surahNumber: 1, verseNumber: 2, status: 'in_progress' as const, repeatCount: 1 },
+      '1_3': { surahNumber: 1, verseNumber: 3, status: 'memorized' as const, repeatCount: 1 },
+    };
+    expect(getSurahHafalanStatus(1, 3, records)).toBe('-');
+  });
+
+  it('updates all verses of a surah to the chosen status and persists to storage', () => {
+    const updated = updateSurahHafalanRecords(1, 3, 'memorized');
+    expect(updated['1_1']?.status).toBe('memorized');
+    expect(updated['1_2']?.status).toBe('memorized');
+    expect(updated['1_3']?.status).toBe('memorized');
+    expect(getSurahHafalanStatus(1, 3, getStoredHafalanRecords())).toBe('memorized');
   });
 });

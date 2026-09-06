@@ -1,6 +1,6 @@
 import { initializeApp, getApps } from 'firebase/app';
 import { getAuth, GoogleAuthProvider, onAuthStateChanged, signInWithPopup, signOut, type Auth } from 'firebase/auth';
-import { getFirestore, doc, getDocFromServer, runTransaction, Timestamp } from 'firebase/firestore';
+import { getFirestore, doc, getDocFromServer, deleteDoc, runTransaction, Timestamp } from 'firebase/firestore';
 import { CloudBackupPayload, GoogleUserProfile, Bookmark, HafalanVerseRecord, UserSettings, LastRead } from '../types';
 
 const MAX_BACKUP_BYTES = 900000;
@@ -97,6 +97,16 @@ export async function downloadCloudBackup(uid: string, _fileId?: string): Promis
   try { payload = JSON.parse(content); } catch { throw new Error('Cadangan bukan JSON yang valid.'); }
   if (!isValidBackupPayload(payload)) throw new Error('Format cadangan Firebase tidak valid.');
   return payload;
+}
+
+export async function deleteCloudBackup(uid: string): Promise<void> {
+  const ref = backupRef(uid);
+  await deleteDoc(ref);
+  try {
+    localStorage.removeItem('quran_firebase_sync_' + uid);
+  } catch {
+    /* Safe ignore */
+  }
 }
 
 export function isValidBackupPayload(value: unknown): value is CloudBackupPayload {

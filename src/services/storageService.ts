@@ -1,4 +1,4 @@
-import { Bookmark, HafalanVerseRecord, LastRead, UserSettings, AudioRecording } from '../types';
+import { Bookmark, HafalanVerseRecord, HafalanStatusType, LastRead, UserSettings, AudioRecording } from '../types';
 
 const BOOKMARKS_KEY = 'murottal_quran_bookmarks_v1';
 const HAFALAN_RECORDS_KEY = 'murottal_quran_hafalan_records_v1';
@@ -88,6 +88,18 @@ export function removeBookmark(surahNumber: number, verseNumber: number): void {
   }
 }
 
+export function removeBookmarksBatch(items: Array<{ surahNumber: number; verseNumber: number }>): void {
+  const toRemove = new Set(items.map((i) => `${i.surahNumber}_${i.verseNumber}`));
+  const bookmarks = getStoredBookmarks().filter(
+    (b) => !toRemove.has(`${b.surahNumber}_${b.verseNumber}`)
+  );
+  try {
+    localStorage.setItem(BOOKMARKS_KEY, JSON.stringify(bookmarks));
+  } catch (e) {
+    console.warn('Failed to remove bookmarks batch:', e);
+  }
+}
+
 export function isVerseBookmarked(surahNumber: number, verseNumber: number): boolean {
   const bookmarks = getStoredBookmarks();
   return bookmarks.some((b) => b.surahNumber === surahNumber && b.verseNumber === verseNumber);
@@ -134,6 +146,53 @@ export function updateHafalanRecord(
   }
 
   return updated;
+}
+
+export function getSurahHafalanStatus(
+  surahNumber: number,
+  totalVerses: number,
+  records: Record<string, HafalanVerseRecord>
+): HafalanStatusType | '-' {
+  if (totalVerses <= 0) return 'not_started';
+  const firstStatus = records[`${surahNumber}_1`]?.status || 'not_started';
+  for (let v = 2; v <= totalVerses; v++) {
+    const s = records[`${surahNumber}_${v}`]?.status || 'not_started';
+    if (s !== firstStatus) {
+      return '-';
+    }
+  }
+  return firstStatus;
+}
+
+export function updateSurahHafalanRecords(
+  surahNumber: number,
+  totalVerses: number,
+  status: HafalanStatusType
+): Record<string, HafalanVerseRecord> {
+  const records = getStoredHafalanRecords();
+  const now = new Date().toISOString();
+
+  for (let v = 1; v <= totalVerses; v++) {
+    const key = `${surahNumber}_${v}`;
+    const existing = records[key] || {
+      surahNumber,
+      verseNumber: v,
+      repeatCount: 0
+    };
+    records[key] = {
+      ...existing,
+      status,
+      lastReviewedAt: now
+    };
+  }
+
+  try {
+    localStorage.setItem(HAFALAN_RECORDS_KEY, JSON.stringify(records));
+  } catch (e) {
+    console.warn('Failed to save surah hafalan records:', e);
+  }
+
+  return records;
 }
 
 // --- Last Read ---
@@ -218,6 +277,14 @@ export async function deleteAudioRecording(id: string): Promise<void> {
     });
   } finally {
     db.close();
+  }
+}
+
+export function clearStoredHafalanRecords(): void {
+  try {
+    localStorage.removeItem(HAFALAN_RECORDS_KEY);
+  } catch (e) {
+    console.warn('Failed to clear hafalan records:', e);
   }
 }
 

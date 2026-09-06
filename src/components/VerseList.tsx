@@ -1,7 +1,8 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useDialogAccessibility } from '../hooks/useDialogAccessibility';
 import { getMushafPage } from '../data/mushafPages';
-import { SurahDetail, Verse, UserSettings, HafalanVerseRecord, AudioPlaybackState } from '../types';
+import { SurahDetail, Verse, UserSettings, HafalanVerseRecord, HafalanStatusType, AudioPlaybackState } from '../types';
+import { getSurahHafalanStatus } from '../services/storageService';
 import { ColoredArabicVerse } from './ColoredArabicVerse';
 import { MushafArabicText, toArabicNumerals } from './MushafArabicText';
 import {
@@ -33,6 +34,7 @@ interface VerseListProps {
   isBookmarked: (verseNumber: number) => boolean;
   hafalanRecords: Record<string, HafalanVerseRecord>;
   onUpdateHafalanStatus: (verseNumber: number, status: HafalanVerseRecord['status']) => void;
+  onUpdateSurahHafalanStatus?: (surahNumber: number, totalVerses: number, status: HafalanStatusType) => void;
   onOpenHafalanModeForVerse: (verseNumber: number) => void;
   onOpenVoiceRecorder: (verseNumber: number) => void;
   onNavigateSurah: (surahNumber: number) => void;
@@ -50,6 +52,7 @@ export const VerseList: React.FC<VerseListProps> = ({
   isBookmarked,
   hafalanRecords,
   onUpdateHafalanStatus,
+  onUpdateSurahHafalanStatus,
   onOpenHafalanModeForVerse,
   onOpenVoiceRecorder,
   onNavigateSurah,
@@ -127,6 +130,12 @@ export const VerseList: React.FC<VerseListProps> = ({
       [verseNum]: !prev[verseNum]
     }));
   };
+
+  const currentSurahHafalanStatus = getSurahHafalanStatus(
+    surahDetail.nomor,
+    surahDetail.jumlahAyat,
+    hafalanRecords
+  );
 
   const selectedMushafVerse = visibleVerses.find(
     (verse) => verse.nomorAyat === selectedMushafVerseNumber
@@ -232,6 +241,33 @@ export const VerseList: React.FC<VerseListProps> = ({
               <Brain className="w-4 h-4 text-[#D4AF37]" />
               <span>Buka Mode Hafalan</span>
             </button>
+
+            {onUpdateSurahHafalanStatus && (
+              <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-[#15171E] border border-[#2A2D35] text-xs">
+                <span className="text-[#8A8D9A] font-medium hidden sm:inline">Status Surah:</span>
+                <select
+                  value={currentSurahHafalanStatus}
+                  onChange={(e) => {
+                    const nextStatus = e.target.value as HafalanStatusType;
+                    if (nextStatus !== '-') {
+                      onUpdateSurahHafalanStatus(surahDetail.nomor, surahDetail.jumlahAyat, nextStatus);
+                    }
+                  }}
+                  className="bg-[#0F1115] border border-[#2A2D35] text-[#E2E2E2] font-semibold text-xs rounded-lg px-2.5 py-1 outline-none focus:border-[#D4AF37] cursor-pointer"
+                  aria-label={`Status hafalan surah ${surahDetail.namaLatin}`}
+                >
+                  {currentSurahHafalanStatus === '-' && (
+                    <option value="-" disabled>
+                      -
+                    </option>
+                  )}
+                  <option value="not_started">Belum Dihafal</option>
+                  <option value="in_progress">Sedang Dihafal</option>
+                  <option value="review_needed">Perlu Murojaah</option>
+                  <option value="memorized">Mutqin</option>
+                </select>
+              </div>
+            )}
           </div>
         </div>
       </div>

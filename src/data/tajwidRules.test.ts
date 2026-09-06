@@ -47,6 +47,13 @@ describe('parseArabicTajwid', () => {
     expect(coloredText('قَالَ فِي يَقُولُ كَتَبَ', 'mad_thobii')).toBe('ايو');
   });
 
+  it('does not color mad thabi\'i as 2 harakat when followed by tasydid across word boundary', () => {
+    // فِي الدِّينِ -> ya mad gugur karena bertemu huruf bertasydid (al-washl)
+    expect(coloredText('فِي الدِّينِ', 'mad_thobii')).toBe('');
+    // مَا النَّاسُ -> alif mad gugur
+    expect(coloredText('مَا النَّاسُ', 'mad_thobii')).toBe('');
+  });
+
   it('detects mad arid lissukun at the end of a verse', () => {
     expect(coloredText('الْعَالَمِينَ', 'mad_arid')).toBe('ينَ');
   });

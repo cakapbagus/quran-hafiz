@@ -23,6 +23,9 @@ service cloud.firestore {
         && request.resource.data.teacherName is string && request.resource.data.teacherName.size() <= 100
         && getAfter(/databases/$(database)/documents/halaqah_profiles/$(request.auth.uid)).data.teacherCode == code
         && get(/databases/$(database)/documents/halaqah_profiles/$(request.auth.uid)).data.teacherCode == '';
+      allow update: if signed() && resource.data.teacherUid == request.auth.uid
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['teacherName'])
+        && request.resource.data.teacherName is string && request.resource.data.teacherName.size() > 0 && request.resource.data.teacherName.size() <= 100;
     }
     match /halaqah_profiles/{uid} {
       allow read: if owner(uid) || (signed() && resource.data.linkedTeacherUid == request.auth.uid);

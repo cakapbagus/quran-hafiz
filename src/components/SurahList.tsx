@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { ALL_SURAHS } from '../data/surahList';
-import { SurahSummary, LastRead, HafalanVerseRecord } from '../types';
+import { SurahSummary, LastRead, HafalanVerseRecord, HafalanStatusType } from '../types';
+import { getSurahHafalanStatus } from '../services/storageService';
 import { Play, BookOpen, Search, CheckCircle2, Award } from 'lucide-react';
 
 interface SurahListProps {
@@ -10,6 +11,7 @@ interface SurahListProps {
   hafalanRecords: Record<string, HafalanVerseRecord>;
   searchQuery: string;
   setSearchQuery: (q: string) => void;
+  onUpdateSurahHafalanStatus?: (surahNumber: number, totalVerses: number, status: HafalanStatusType) => void;
 }
 
 export const SurahList: React.FC<SurahListProps> = ({
@@ -18,7 +20,8 @@ export const SurahList: React.FC<SurahListProps> = ({
   lastRead,
   hafalanRecords,
   searchQuery,
-  setSearchQuery
+  setSearchQuery,
+  onUpdateSurahHafalanStatus
 }) => {
   const [selectedJuz, setSelectedJuz] = useState<number | null>(null);
   const [selectedType, setSelectedType] = useState<'all' | 'Mekkah' | 'Madinah'>('all');
@@ -207,17 +210,45 @@ export const SurahList: React.FC<SurahListProps> = ({
                     </span>
                   </div>
 
-                  {/* Quick Play Audio Button */}
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onPlaySurahAudio(surah.nomor);
-                    }}
-                    className="p-1.5 rounded-lg bg-[#0F1115] text-[#D4AF37] hover:bg-[#D4AF37] hover:text-[#0A0A0B] border border-[#2A2D35] transition-colors cursor-pointer"
-                    title={`Putar Murottal Surah ${surah.namaLatin}`}
-                  >
-                    <Play className="w-3.5 h-3.5 fill-current" />
-                  </button>
+                  <div className="flex items-center gap-2">
+                    {onUpdateSurahHafalanStatus && (
+                      <div onClick={(e) => e.stopPropagation()}>
+                        <select
+                          value={getSurahHafalanStatus(surah.nomor, surah.jumlahAyat, hafalanRecords)}
+                          onChange={(e) => {
+                            const val = e.target.value as HafalanStatusType;
+                            if (val !== '-') {
+                              onUpdateSurahHafalanStatus(surah.nomor, surah.jumlahAyat, val);
+                            }
+                          }}
+                          className="rounded-lg border border-[#2A2D35] bg-[#0F1115] px-2 py-1 text-[10px] font-semibold text-[#8A8D9A] outline-none hover:border-[#D4AF37]/60 focus:border-[#D4AF37] cursor-pointer"
+                          aria-label={`Status hafalan surah ${surah.namaLatin}`}
+                        >
+                          {getSurahHafalanStatus(surah.nomor, surah.jumlahAyat, hafalanRecords) === '-' && (
+                            <option value="-" disabled>
+                              -
+                            </option>
+                          )}
+                          <option value="not_started">Belum Dihafal</option>
+                          <option value="in_progress">Sedang Dihafal</option>
+                          <option value="review_needed">Perlu Murojaah</option>
+                          <option value="memorized">Mutqin</option>
+                        </select>
+                      </div>
+                    )}
+
+                    {/* Quick Play Audio Button */}
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onPlaySurahAudio(surah.nomor);
+                      }}
+                      className="p-1.5 rounded-lg bg-[#0F1115] text-[#D4AF37] hover:bg-[#D4AF37] hover:text-[#0A0A0B] border border-[#2A2D35] transition-colors cursor-pointer"
+                      title={`Putar Murottal Surah ${surah.namaLatin}`}
+                    >
+                      <Play className="w-3.5 h-3.5 fill-current" />
+                    </button>
+                  </div>
                 </div>
               </div>
 

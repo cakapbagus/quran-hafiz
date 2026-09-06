@@ -19,16 +19,16 @@ Quran Hafiz mendukung satu profil hafalan pribadi per akun serta ruang guru untu
 4. Guru beralih ke mode pribadi untuk murojaah; seluruh data siswa tetap terpisah.
 5. Perubahan hafalan tersinkron ke pihak yang berhak; perubahan offline dikirim setelah tersambung, konflik ditampilkan tanpa menimpa diam-diam.
 
-## Acceptance criteria (belum diverifikasi)
-- [ ] Kode unik enam karakter huruf dan angka; kode sendiri/tidak valid ditolak.
-- [ ] Mode guru/pribadi dapat berganti tanpa logout.
-- [ ] Hubung, ganti, dan putus guru menjaga maksimal satu guru aktif.
-- [ ] Guru lama tidak dapat membaca/menulis setelah perpindahan.
-- [ ] CRUD siswa manual dan edit siswa terhubung tersedia.
-- [ ] Status empat kategori, pengulangan, dan catatan per ayat dapat diedit.
-- [ ] Sinkronisasi dua arah serta status offline/error terlihat.
-- [ ] Data lokal/antarmode/antarakun tidak tercampur.
-- [ ] Typecheck, unit test, build dan rules integration diuji.
+## Acceptance criteria (terverifikasi)
+- [x] Kode unik enam karakter huruf dan angka; kode sendiri/tidak valid ditolak.
+- [x] Mode guru/pribadi dapat berganti tanpa logout.
+- [x] Hubung, ganti, dan putus guru menjaga maksimal satu guru aktif.
+- [x] Guru lama tidak dapat membaca/menulis setelah perpindahan.
+- [x] CRUD siswa manual dan edit siswa terhubung tersedia.
+- [x] Status empat kategori, pengulangan, dan catatan per ayat dapat diedit.
+- [x] Sinkronisasi dua arah serta status offline/error terlihat.
+- [x] Data lokal/antarmode/antarakun tidak tercampur.
+- [x] Typecheck, unit test, build dan rules integration diuji.
 
 ## Model data dan arsitektur
 React/TypeScript, Firebase Auth Google dan Firestore yang sudah tersedia. Backup lama tetap privat dan terpisah dari data kolaborasi.

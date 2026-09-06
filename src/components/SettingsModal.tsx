@@ -2,13 +2,14 @@ import React from 'react';
 import { useDialogAccessibility } from '../hooks/useDialogAccessibility';
 import { UserSettings } from '../types';
 import { QARIS } from '../data/qaris';
-import { X, Sliders, Type, Volume2, Moon, Sun, Trash2, Cloud, Sparkles, BookOpen, Rows3 } from 'lucide-react';
+import { X, Sliders, Type, Volume2, Moon, Sun, Trash2, Cloud, Sparkles, BookOpen, Rows3, RotateCcw } from 'lucide-react';
 
 interface SettingsModalProps {
   settings: UserSettings;
   onUpdateSettings: (newSettings: Partial<UserSettings>) => void;
   onClose: () => void;
   onClearCache: () => void;
+  onResetProgress?: () => void;
   onOpenCloudSync?: () => void;
 }
 
@@ -17,6 +18,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   onUpdateSettings,
   onClose,
   onClearCache,
+  onResetProgress,
   onOpenCloudSync
 }) => {
   const dialogRef = useDialogAccessibility(onClose);
@@ -237,8 +239,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
           </select>
         </div>
 
-        {/* Clear Cache */}
-        <div className="pt-2 border-t border-[#1F2128]">
+        {/* Clear Cache & Reset Progress */}
+        <div className="pt-2 border-t border-[#1F2128] space-y-2">
           <button
             onClick={onClearCache}
             className="w-full flex items-center justify-center gap-2 p-3 rounded-2xl bg-[#0F1115] border border-red-900/50 text-red-400 font-semibold text-xs hover:bg-red-950/20 transition cursor-pointer"
@@ -246,6 +248,16 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             <Trash2 className="w-4 h-4" />
             <span>Bersihkan Cache Data Surah</span>
           </button>
+
+          {onResetProgress && (
+            <button
+              onClick={onResetProgress}
+              className="w-full flex items-center justify-center gap-2 p-3 rounded-2xl bg-[#0F1115] border border-amber-900/50 text-amber-400 font-semibold text-xs hover:bg-amber-950/20 transition cursor-pointer"
+            >
+              <RotateCcw className="w-4 h-4" />
+              <span>Reset Seluruh Progress Hafalan</span>
+            </button>
+          )}
         </div>
 
         <div className="pt-2 flex justify-end">

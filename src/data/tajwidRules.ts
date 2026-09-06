@@ -638,6 +638,22 @@ export function parseArabicTajwid(arabicText: string): TajwidToken[] {
       const nextIsHamzah = nextGrapheme?.base ? 'ءأإؤئ'.includes(nextGrapheme.base) : false;
       const nextIsLastArabicLetter = nextIndex >= 0 && getNextArabicLetterIndex(graphemes, nextIndex) === -1;
 
+      // Check if next letter across word boundary has tasydid (or hamzah washl followed by tasydid / lam syamsiyyah)
+      let followsTasydidAcrossWord = false;
+      if (crossesWordBoundary && nextIndex >= 0) {
+        if (SHADDA_PATTERN.test(graphemes[nextIndex].text)) {
+          followsTasydidAcrossWord = true;
+        } else {
+          for (let step = nextIndex; step < Math.min(graphemes.length, nextIndex + 4); step++) {
+            if (hasWhitespaceBetween(graphemes, nextIndex, step)) break;
+            if (SHADDA_PATTERN.test(graphemes[step].text)) {
+              followsTasydidAcrossWord = true;
+              break;
+            }
+          }
+        }
+      }
+
       if (grapheme.text.includes('ۤ')) {
         assignRule(index, 'mad_lazim');
       } else if (nextGrapheme && !crossesWordBoundary && nextIsHamzah) {
@@ -655,6 +671,9 @@ export function parseArabicTajwid(arabicText: string): TajwidToken[] {
       ) {
         assignRule(index, 'mad_arid');
         assignRule(nextIndex, 'mad_arid');
+      } else if (followsTasydidAcrossWord) {
+        // Bertemu tasydid di kata berikutnya (misal: فِي الدِّينِ, مَا النَّاسُ, إِلَى الَّذِينَ):
+        // Mad thabi'i gugur / tidak dibaca panjang saat washal
       } else {
         assignRule(index, 'mad_thobii');
       }

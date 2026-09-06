@@ -65,6 +65,24 @@ export function watchStudents(uid: string, manual: boolean, next: (s: Student[])
   return onSnapshot(q, s => next(s.docs.map(d => ({ id: d.id, name: d.data().name, manual }))), error);
 }
 function validName(name: string) { if (!name.trim() || name.trim().length > 100) throw new Error('Nama wajib diisi, maksimal 100 karakter.'); return name.trim(); }
+export async function updateProfileName(name: string) {
+  const { db, uid } = identity();
+  const trimmed = validName(name);
+  await runTransaction(db, async tx => {
+    const pRef = profileRef(uid);
+    const pSnap = await tx.get(pRef);
+    if (!pSnap.exists()) throw new Error('Profil belum siap.');
+    const currentData = pSnap.data() as Profile;
+    tx.update(pRef, { name: trimmed });
+    if (currentData.teacherCode) {
+      const codeRef = doc(db, 'teacher_codes', currentData.teacherCode);
+      const codeSnap = await tx.get(codeRef);
+      if (codeSnap.exists()) {
+        tx.update(codeRef, { teacherName: trimmed });
+      }
+    }
+  });
+}
 export async function addManual(name: string) { const { db, uid } = identity(); await setDoc(doc(collection(db, 'teachers', uid, 'manual_students')), { name: validName(name), archived: false }); }
 export async function renameStudent(s: Student, name: string) { const { db, uid } = identity(); await updateDoc(s.manual ? doc(db, 'teachers', uid, 'manual_students', s.id) : profileRef(s.id), { name: validName(name) }); }
 export async function archiveManual(id: string) { const { db, uid } = identity(); await updateDoc(doc(db, 'teachers', uid, 'manual_students', id), { archived: true }); }

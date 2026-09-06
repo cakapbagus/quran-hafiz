@@ -15,6 +15,7 @@ import {
   EyeOff,
   User,
   LogOut,
+  Trash2,
   RefreshCw,
   FileJson,
   Bookmark as BookmarkIcon,
@@ -43,6 +44,7 @@ import {
   findCloudBackupFile,
   uploadCloudBackup,
   downloadCloudBackup,
+  deleteCloudBackup,
   buildBackupPayload
 } from '../services/firebaseCloudService';
 
@@ -301,6 +303,43 @@ export const CloudSyncModal: React.FC<CloudSyncModalProps> = ({
       });
     } finally {
       setIsSyncingDownload(false);
+    }
+  };
+
+  const [isDeletingCloud, setIsDeletingCloud] = useState<boolean>(false);
+
+  // Handle Unlink & Delete Cloud Data
+  const handleUnlinkAndDeleteCloudData = async () => {
+    if (!token) return;
+
+    const confirmed = window.confirm(
+      'PERINGATAN: Tindakan ini akan menghapus permanen berkas cadangan Anda di cloud Firebase dan memutuskan akun Google dari perangkat ini. Data lokal Anda tidak akan dihapus. Lanjutkan?'
+    );
+    if (!confirmed) return;
+
+    setIsDeletingCloud(true);
+    setStatusMessage(null);
+
+    try {
+      await deleteCloudBackup(token);
+      await disconnectCloud();
+      setToken(null);
+      setUserProfile(null);
+      setCloudFileInfo(null);
+      setConflictingBackup(null);
+      setLastSyncedAt(null);
+      setStatusMessage({
+        type: 'success',
+        text: 'Data cadangan di cloud Firebase berhasil dihapus dan akun telah diputuskan.'
+      });
+    } catch (err: any) {
+      console.error('Delete cloud data failed:', err);
+      setStatusMessage({
+        type: 'error',
+        text: err?.message || 'Gagal menghapus data dari cloud Firebase.'
+      });
+    } finally {
+      setIsDeletingCloud(false);
     }
   };
 
@@ -563,6 +602,24 @@ export const CloudSyncModal: React.FC<CloudSyncModalProps> = ({
                 <span>Cadangan Firebase: <strong className="text-[#E2E2E2]">users/UID/backups/current</strong></span>
               </span>
               <span>{formatTimestamp(cloudFileInfo.modifiedTime)}</span>
+            </div>
+          )}
+
+          {/* Unlink & Delete Cloud Data Button */}
+          {token && (
+            <div className="pt-2">
+              <button
+                onClick={handleUnlinkAndDeleteCloudData}
+                disabled={isCheckingCloudFile || isLoadingAuth || isSyncingUpload || isSyncingDownload || isDeletingCloud}
+                className="w-full flex items-center justify-center gap-2 p-3 rounded-2xl bg-[#0F1115] border border-red-900/50 text-red-400 font-semibold text-xs hover:bg-red-950/20 transition cursor-pointer disabled:opacity-50"
+              >
+                {isDeletingCloud ? (
+                  <Loader2 className="w-4 h-4 animate-spin text-red-400" />
+                ) : (
+                  <Trash2 className="w-4 h-4 text-red-400" />
+                )}
+                <span>Unlink & Hapus Data di Cloud</span>
+              </button>
             </div>
           )}
         </div>

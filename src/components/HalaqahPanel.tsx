@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { signInGoogle, subscribeCloudAuth } from '../services/firebaseCloudService';
-import { flushPending, pendingCount, discardPending, activateTeacher, addManual, archiveManual, changeTeacher, ensureProfile, lookupTeacher, renameStudent, saveVerse, watchProfile, watchRecords, watchStudents, type Profile, type Records, type Student, type Target } from '../services/halaqahService';
+import { flushPending, pendingCount, discardPending, activateTeacher, addManual, archiveManual, changeTeacher, ensureProfile, lookupTeacher, renameStudent, updateProfileName, saveVerse, watchProfile, watchRecords, watchStudents, type Profile, type Records, type Student, type Target } from '../services/halaqahService';
 import { ALL_SURAHS } from '../data/surahList';
 import type { HafalanVerseRecord } from '../types';
 
@@ -40,6 +40,21 @@ export function HalaqahPanel({ teacherMode, setTeacherMode }: { teacherMode: boo
     {error && <p role="alert" className="text-red-500">{error}</p>}
     {pending > 0 && <div role="status">{pending} perubahan offline menunggu sinkronisasi. <button className={button} disabled={busy || !online} onClick={() => void act(flushPending)}>Coba Sinkron Lagi</button> <button className={button} onClick={() => { if (window.confirm('Buang perubahan offline dan gunakan versi server?')) discardPending(); }}>Buang Antrean</button></div>}
     {uid && !profile && <p>Memuat profil…</p>}
+    {uid && profile && <div className="flex items-center gap-2 text-sm bg-zinc-900/40 p-2.5 rounded-xl border border-zinc-800">
+      <span>Nama Tampilan: <strong className="text-amber-400">{profile.name}</strong></span>
+      <button
+        className="text-xs px-2.5 py-1 rounded-lg border border-zinc-700 hover:bg-zinc-800 cursor-pointer transition text-zinc-300"
+        disabled={busy || !online}
+        onClick={() => {
+          const newName = window.prompt('Ubah nama tampilan Anda (sebagai murid / guru):', profile.name);
+          if (newName !== null && newName.trim() && newName.trim() !== profile.name) {
+            void act(() => updateProfileName(newName));
+          }
+        }}
+      >
+        Ubah Nama
+      </button>
+    </div>}
     {uid && profile && !teacherMode && <details><summary className="cursor-pointer">Guru pembimbing: {profile.linkedTeacherName || 'Belum terhubung'}</summary>
       <div className="flex flex-wrap gap-2 py-3"><label>Kode Guru <input className={input} aria-label="Kode Guru" value={code} maxLength={6} onChange={e => setCode(e.target.value.toUpperCase())} placeholder="A7K9X2" /></label>
         <button className={button} disabled={busy || !online} onClick={() => void act(async () => { const t = await lookupTeacher(code); if (window.confirm(`Hubungkan ke ${t.teacherName}? Guru ini dapat membaca dan mengedit hafalan Anda. Akses guru lama akan dicabut.`)) { await changeTeacher(t.code); setCode(''); } })}>{profile.linkedTeacherUid ? 'Ganti Guru' : 'Hubungkan Guru'}</button>

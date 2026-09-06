@@ -4,6 +4,7 @@ import {
   Verse,
   Bookmark,
   HafalanVerseRecord,
+  HafalanStatusType,
   LastRead,
   UserSettings,
   AudioPlaybackState
@@ -17,9 +18,12 @@ import {
   getStoredBookmarks,
   saveBookmark,
   removeBookmark,
+  removeBookmarksBatch,
   isVerseBookmarked,
   getStoredHafalanRecords,
   updateHafalanRecord,
+  updateSurahHafalanRecords,
+  clearStoredHafalanRecords,
   getStoredLastRead,
   saveLastRead,
   restoreStoredDataAtomically,
@@ -86,6 +90,37 @@ export default function App() {
     const old = sharedRecords[`${surahNumber}_${verseNumber}`];
     setSharedError('');
     void saveVerse({ uid: sharedUid }, { surahNumber, verseNumber, repeatCount: old?.repeatCount || 0, notes: old?.notes || '', status }, old?.revision || 0).catch(error => setSharedError(error.message));
+  };
+  const updateSurahPersonalStatus = async (surahNumber: number, totalVerses: number, status: HafalanStatusType) => {
+    if (!sharedUid) {
+      updateSurahHafalanRecords(surahNumber, totalVerses, status);
+      setHafalanRecords(getStoredHafalanRecords());
+      return;
+    }
+    if (!sharedReady) { setSharedError('Hafalan cloud belum siap.'); return; }
+    setSharedError('');
+    try {
+      const saves = [];
+      for (let v = 1; v <= totalVerses; v++) {
+        const old = sharedRecords[`${surahNumber}_${v}`];
+        saves.push(
+          saveVerse(
+            { uid: sharedUid },
+            {
+              surahNumber,
+              verseNumber: v,
+              repeatCount: old?.repeatCount || 0,
+              notes: old?.notes || '',
+              status
+            },
+            old?.revision || 0
+          )
+        );
+      }
+      await Promise.all(saves);
+    } catch (error) {
+      setSharedError(error instanceof Error ? error.message : String(error));
+    }
   };
 
   // Modals & Popups
@@ -451,6 +486,11 @@ export default function App() {
     setBookmarks(getStoredBookmarks());
   };
 
+  const handleRemoveBookmarksBatch = (items: Array<{ surahNumber: number; verseNumber: number }>) => {
+    removeBookmarksBatch(items);
+    setBookmarks(getStoredBookmarks());
+  };
+
   // Hafalan Record Handler
   const handleUpdateHafalanStatus = (
     verseNumber: number,
@@ -458,6 +498,14 @@ export default function App() {
   ) => {
     if (!currentSurahDetail) return;
     updatePersonalStatus(currentSurahDetail.nomor, verseNumber, status);
+  };
+
+  const handleUpdateSurahHafalanStatus = (
+    surahNumber: number,
+    totalVerses: number,
+    status: HafalanStatusType
+  ) => {
+    void updateSurahPersonalStatus(surahNumber, totalVerses, status);
   };
 
   // Navigation handlers
@@ -558,6 +606,7 @@ export default function App() {
                 hafalanRecords={hafalanRecords}
                 searchQuery={searchQuery}
                 setSearchQuery={setSearchQuery}
+                onUpdateSurahHafalanStatus={handleUpdateSurahHafalanStatus}
               />
             ) : isLoadingSurah ? (
               <div className="text-center py-24 space-y-3">
@@ -606,6 +655,7 @@ export default function App() {
                   isBookmarked={(vNum) => isVerseBookmarked(currentSurahDetail.nomor, vNum)}
                   hafalanRecords={hafalanRecords}
                   onUpdateHafalanStatus={handleUpdateHafalanStatus}
+                  onUpdateSurahHafalanStatus={handleUpdateSurahHafalanStatus}
                   onOpenHafalanModeForVerse={(vNum) => handleOpenHafalanForVerse(currentSurahDetail.nomor, vNum)}
                   onOpenVoiceRecorder={(vNum) =>
                     setVoiceRecorderVerse({ surahNumber: currentSurahDetail.nomor, verseNumber: vNum })
@@ -629,6 +679,7 @@ export default function App() {
             settings={settings}
             hafalanRecords={hafalanRecords}
             onUpdateHafalanStatus={handleUpdateHafalanStatus}
+            onUpdateSurahHafalanStatus={handleUpdateSurahHafalanStatus}
             playbackState={playbackState}
             onPlayRangeAudio={handlePlayRangeAudio}
             onPauseAudio={handlePauseAudio}
@@ -663,6 +714,7 @@ export default function App() {
           <BookmarksView
             bookmarks={bookmarks}
             onRemoveBookmark={handleRemoveBookmark}
+            onRemoveBookmarksBatch={handleRemoveBookmarksBatch}
             onJumpToVerse={handleJumpToBookmark}
             onOpenHafalanForVerse={handleOpenHafalanForVerse}
           />
@@ -721,6 +773,13 @@ export default function App() {
             clearQuranCache()
               .then(() => window.location.reload())
               .catch((error) => console.warn('Failed to clear Quran cache:', error));
+          }}
+          onResetProgress={() => {
+            if (window.confirm('Apakah Anda yakin ingin mereset seluruh progres hafalan? Tindakan ini akan mengosongkan status hafalan lokal.')) {
+              clearStoredHafalanRecords();
+              setHafalanRecords({});
+              setIsSettingsOpen(false);
+            }
           }}
         />
       )}

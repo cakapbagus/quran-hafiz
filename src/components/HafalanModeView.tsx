@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { SurahDetail, Verse, HafalanVerseRecord, UserSettings, AudioPlaybackState } from '../types';
+import { SurahDetail, Verse, HafalanVerseRecord, HafalanStatusType, UserSettings, AudioPlaybackState } from '../types';
+import { getSurahHafalanStatus } from '../services/storageService';
 import { ALL_SURAHS } from '../data/surahList';
 import { MushafArabicText, toArabicNumerals } from './MushafArabicText';
 import {
@@ -30,6 +31,7 @@ interface HafalanModeViewProps {
   settings: UserSettings;
   hafalanRecords: Record<string, HafalanVerseRecord>;
   onUpdateHafalanStatus: (verseNumber: number, status: HafalanVerseRecord['status']) => void;
+  onUpdateSurahHafalanStatus?: (surahNumber: number, totalVerses: number, status: HafalanStatusType) => void;
   playbackState: AudioPlaybackState;
   onPlayRangeAudio: (startVerse: number, endVerse: number, repeatCount: number) => void;
   onPauseAudio: () => void;
@@ -43,6 +45,7 @@ export const HafalanModeView: React.FC<HafalanModeViewProps> = ({
   settings,
   hafalanRecords,
   onUpdateHafalanStatus,
+  onUpdateSurahHafalanStatus,
   playbackState,
   onPlayRangeAudio,
   onPauseAudio,
@@ -241,10 +244,39 @@ export const HafalanModeView: React.FC<HafalanModeViewProps> = ({
         </div>
 
         {/* Master Play Button for Range Looping */}
-        <div className="pt-2 flex items-center justify-between border-t border-[#1F2128]">
-          <p className="text-xs text-[#8A8D9A]">
-            Target: <strong className="text-[#D4AF37]">{currentSurah?.namaLatin} Ayat {startVerse} - {endVerse}</strong> ({filteredVerses.length} ayat)
-          </p>
+        <div className="pt-2 flex flex-wrap items-center justify-between gap-3 border-t border-[#1F2128]">
+          <div className="flex flex-wrap items-center gap-3">
+            <p className="text-xs text-[#8A8D9A]">
+              Target: <strong className="text-[#D4AF37]">{currentSurah?.namaLatin} Ayat {startVerse} - {endVerse}</strong> ({filteredVerses.length} ayat)
+            </p>
+
+            {onUpdateSurahHafalanStatus && currentSurah && (
+              <div className="flex items-center gap-2 text-xs">
+                <span className="text-[#8A8D9A]">Status Surah:</span>
+                <select
+                  value={getSurahHafalanStatus(currentSurah.nomor, currentSurah.jumlahAyat, hafalanRecords)}
+                  onChange={(e) => {
+                    const nextStatus = e.target.value as HafalanStatusType;
+                    if (nextStatus !== '-') {
+                      onUpdateSurahHafalanStatus(currentSurah.nomor, currentSurah.jumlahAyat, nextStatus);
+                    }
+                  }}
+                  className="rounded-lg border border-[#2A2D35] bg-[#0F1115] px-2.5 py-1 text-xs font-semibold text-[#E2E2E2] outline-none focus:border-[#D4AF37] cursor-pointer"
+                  aria-label={`Status hafalan surah ${currentSurah.namaLatin}`}
+                >
+                  {getSurahHafalanStatus(currentSurah.nomor, currentSurah.jumlahAyat, hafalanRecords) === '-' && (
+                    <option value="-" disabled>
+                      -
+                    </option>
+                  )}
+                  <option value="not_started">Belum Dihafal</option>
+                  <option value="in_progress">Sedang Dihafal</option>
+                  <option value="review_needed">Perlu Murojaah</option>
+                  <option value="memorized">Mutqin</option>
+                </select>
+              </div>
+            )}
+          </div>
 
           <button
             onClick={() => {
