@@ -55,8 +55,7 @@ export const SurahList: React.FC<SurahListProps> = ({
         !q ||
         surah.namaLatin.toLowerCase().includes(q) ||
         surah.arti.toLowerCase().includes(q) ||
-        surah.nomor.toString() === q ||
-        surah.nama.includes(q);
+        surah.nomor.toString() === q;
 
       // Juz match
       const matchesJuz = selectedJuz === null || surah.juzStart === selectedJuz;

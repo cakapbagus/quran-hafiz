@@ -1,7 +1,7 @@
 import { collection, deleteDoc, doc, getDocFromServer, onSnapshot, query, where, runTransaction, setDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
 import { services } from './firebaseCloudService';
 import { ALL_SURAHS } from '../data/surahList';
-import type { HafalanVerseRecord } from '../types';
+import type { HafalanStatusType, HafalanVerseRecord } from '../types';
 
 export interface Profile { name: string; teacherCode: string; linkedTeacherUid: string; linkedTeacherCode: string; linkedTeacherName: string }
 export interface Student { id: string; name: string; originalName?: string; alias?: string; manual: boolean }
@@ -213,7 +213,8 @@ export async function archiveManual(id: string) { const { db, uid } = identity()
 function verses(target: Target) { const { db } = services(); return target.manualId ? collection(db, 'teachers', target.uid, 'manual_students', target.manualId, 'verses') : collection(db, 'learner_records', target.uid, 'verses'); }
 export function watchRecords(target: Target, next: (r: Records) => void, error: (e: Error) => void) { return onSnapshot(verses(target), s => next(Object.fromEntries(s.docs.map(d => [d.id, d.data() as SharedVerse]))), error); }
 export async function importLegacyHafalan(records: Record<string, HafalanVerseRecord>, expectedUid: string) {
-  for (const record of Object.values(records)) {
+  for (const [key, storedRecord] of Object.entries(records)) {
+    const record = normalizeLegacyHafalanRecord(storedRecord, key);
     validateVerse(record);
     const { uid, db } = identity();
     if (uid !== expectedUid) throw new Error('Akun berubah; impor dihentikan.');
@@ -223,6 +224,28 @@ export async function importLegacyHafalan(records: Record<string, HafalanVerseRe
       tx.set(ref, { surahNumber: record.surahNumber, verseNumber: record.verseNumber, status: record.status, repeatCount: record.repeatCount, notes: record.notes || '', lastReviewedAt: record.lastReviewedAt || new Date().toISOString(), revision: 1, updatedBy: uid, updatedAt: serverTimestamp() });
     });
   }
+}
+
+export function normalizeLegacyHafalanRecord(value: unknown, key = ''): HafalanVerseRecord {
+  const source = value && typeof value === 'object' ? value as Record<string, unknown> : {};
+  const keyParts = key.match(/^(\d+)_(\d+)$/);
+  const surahNumber = Number(source.surahNumber ?? keyParts?.[1]);
+  const verseNumber = Number(source.verseNumber ?? keyParts?.[2]);
+  const allowedStatuses: HafalanStatusType[] = ['not_started', 'in_progress', 'review_needed', 'memorized'];
+  const status = allowedStatuses.includes(source.status as HafalanStatusType)
+    ? source.status as HafalanStatusType
+    : 'not_started';
+  const parsedRepeatCount = Number(source.repeatCount ?? 0);
+  const repeatCount = Number.isInteger(parsedRepeatCount) && parsedRepeatCount >= 0 ? parsedRepeatCount : 0;
+
+  return {
+    surahNumber,
+    verseNumber,
+    status,
+    repeatCount,
+    notes: typeof source.notes === 'string' ? source.notes : '',
+    lastReviewedAt: typeof source.lastReviewedAt === 'string' ? source.lastReviewedAt : undefined,
+  };
 }
 
 export function validateVerse(record: HafalanVerseRecord) {

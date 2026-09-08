@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { generateCode, normalizeCode, validCode, validateVerse, renameStudent, requestTeacher, unlinkStudent, archiveManual, type Student } from './halaqahService';
+import { generateCode, normalizeCode, validCode, validateVerse, normalizeLegacyHafalanRecord, renameStudent, requestTeacher, unlinkStudent, archiveManual, type Student } from './halaqahService';
 import { getDocFromServer, setDoc, updateDoc, deleteDoc } from 'firebase/firestore';
 
 vi.mock('firebase/firestore', () => ({
@@ -36,6 +36,22 @@ describe('Hafalan validation', () => {
   it('accepts a valid verse', () => expect(() => validateVerse(base)).not.toThrow());
   it('rejects invalid ranges and notes', () => {
     for (const change of [{ verseNumber: 8 }, { verseNumber: 1.5 }, { surahNumber: 115 }, { repeatCount: -1 }, { notes: 'x'.repeat(2001) }]) expect(() => validateVerse({ ...base, ...change })).toThrow();
+  });
+  it('normalizes records written by older mobile versions', () => {
+    expect(normalizeLegacyHafalanRecord({ surahNumber: '2', verseNumber: '5', repeatCount: '3' }, '2_5')).toEqual({
+      surahNumber: 2,
+      verseNumber: 5,
+      status: 'not_started',
+      repeatCount: 3,
+      notes: '',
+      lastReviewedAt: undefined,
+    });
+    expect(normalizeLegacyHafalanRecord({ status: 'memorized' }, '1_7')).toMatchObject({
+      surahNumber: 1,
+      verseNumber: 7,
+      status: 'memorized',
+      repeatCount: 0,
+    });
   });
 });
 

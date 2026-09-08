@@ -1,5 +1,5 @@
 import { confirmAction } from './components/AppDialog';
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
   SurahDetail,
   Verse,
@@ -38,7 +38,8 @@ import {
   uploadCloudBackup,
   findCloudBackupFile,
   buildBackupPayload,
-  getStoredLastSyncedAt
+  getStoredLastSyncedAt,
+  clearUserCloudHafalan
 } from './services/firebaseCloudService';
 
 import { Header, MainTabType } from './components/Header';
@@ -128,6 +129,11 @@ export default function App() {
   const [isCloudSyncOpen, setIsCloudSyncOpen] = useState<boolean>(false);
   const [isCloudConnected, setIsCloudConnected] = useState<boolean>(!!getStoredAccessToken());
 
+  const handleCloseCloudSync = useCallback(() => {
+    setIsCloudSyncOpen(false);
+    setIsCloudConnected(!!getStoredAccessToken());
+  }, []);
+
   useEffect(() => subscribeCloudAuth(uid => { setSharedUid(uid); setSharedRecords({}); setSharedReady(false); }), []);
   useEffect(() => {
     if (!sharedUid) { setHafalanRecords(getStoredHafalanRecords()); return; }
@@ -204,8 +210,9 @@ export default function App() {
     autoScrollEnabled: true
   });
 
-  const [audioProgress, setAudioProgress] = useState<number>(0);
-  const [currentTimeStr, setCurrentTimeStr] = useState<string>('00:00');
+  const [audioProgress, setAudioProgress] = useState(0);
+  const [audioVolume, setAudioVolume] = useState(100);
+  const [currentTimeStr, setCurrentTimeStr] = useState('0:00');
   const [durationTimeStr, setDurationTimeStr] = useState<string>('00:00');
 
   // Audio HTML Element Ref
@@ -269,6 +276,7 @@ export default function App() {
   // Sync HTML5 Audio element
   useEffect(() => {
     const audio = new Audio();
+    audio.volume = audioVolume / 100;
     audioRef.current = audio;
 
     const handleTimeUpdate = () => {
@@ -516,6 +524,12 @@ export default function App() {
     }
   };
 
+  const handleVolumeChange = (volume: number) => {
+    const normalizedVolume = Math.max(0, Math.min(100, Math.round(volume)));
+    setAudioVolume(normalizedVolume);
+    if (audioRef.current) audioRef.current.volume = normalizedVolume / 100;
+  };
+
   // Bookmark handlers
   const handleToggleBookmark = (verse: Verse, note?: string) => {
     if (!currentSurahDetail) return;
@@ -671,6 +685,7 @@ export default function App() {
         onToggleLearningRoom={() => setLearningRoomOpen(open => !open)}
         setTeacherMode={setTeacherMode}
         activeTab={activeTab}
+        isSurahListView={selectedSurahNumber === null}
         setActiveTab={(tab) => {
           setLearningRoomOpen(false);
           if (tab === 'read') {
@@ -856,16 +871,15 @@ export default function App() {
         currentTimeStr={currentTimeStr}
         durationTimeStr={durationTimeStr}
         onSeek={handleSeek}
+        volume={audioVolume}
+        onVolumeChange={handleVolumeChange}
         settings={settings}
       />
 
       {/* Cloud Sync Modal */}
       <CloudSyncModal
         isOpen={isCloudSyncOpen}
-        onClose={() => {
-          setIsCloudSyncOpen(false);
-          setIsCloudConnected(!!getStoredAccessToken());
-        }}
+        onClose={handleCloseCloudSync}
         settings={settings}
         bookmarks={bookmarks}
         hafalanRecords={hafalanRecords}
@@ -898,9 +912,22 @@ export default function App() {
               .catch((error) => console.warn('Failed to clear Quran cache:', error));
           }}
           onResetProgress={async () => {
-            if (await confirmAction('Apakah Anda yakin ingin mereset seluruh progres hafalan? Tindakan ini akan mengosongkan status hafalan lokal.')) {
+            const isConnected = !!sharedUid;
+            const message = isConnected
+              ? 'Apakah Anda yakin ingin mereset seluruh progres hafalan? Tindakan ini akan mengosongkan status hafalan lokal dan di akun cloud Anda.'
+              : 'Apakah Anda yakin ingin mereset seluruh progres hafalan? Tindakan ini akan mengosongkan status hafalan lokal.';
+            if (await confirmAction(message)) {
               clearStoredHafalanRecords();
               setHafalanRecords({});
+              setSharedRecords({});
+              if (sharedUid) {
+                try {
+                  await clearUserCloudHafalan(sharedUid);
+                } catch (error) {
+                  console.error('Gagal menghapus hafalan cloud:', error);
+                  setSharedError('Gagal mengosongkan hafalan di cloud.');
+                }
+              }
               setIsSettingsOpen(false);
             }
           }}

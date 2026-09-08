@@ -5,6 +5,7 @@ import { SurahDetail, Verse, UserSettings, HafalanVerseRecord, HafalanStatusType
 import { getSurahHafalanStatus } from '../services/storageService';
 import { ColoredArabicVerse } from './ColoredArabicVerse';
 import { MushafArabicText, toArabicNumerals } from './MushafArabicText';
+import { VerseCombobox } from './VerseCombobox';
 import {
   Play,
   Pause,
@@ -72,6 +73,7 @@ export const VerseList: React.FC<VerseListProps> = ({
   const [copiedVerseNum, setCopiedVerseNum] = useState<number | null>(null);
   const [maskedVerses, setMaskedVerses] = useState<Record<number, boolean>>({});
   const [selectedMushafVerseNumber, setSelectedMushafVerseNumber] = useState<number | null>(null);
+  const [gotoVerseNumber, setGotoVerseNumber] = useState(1);
   const firstMushafPage = getMushafPage(surahDetail.nomor, surahDetail.ayat[0]?.nomorAyat ?? 1);
   const [currentMushafPage, setCurrentMushafPage] = useState(firstMushafPage);
   const bookmarkDialogRef = useDialogAccessibility(() => setBookmarkNoteModalVerse(null), Boolean(bookmarkNoteModalVerse));
@@ -84,12 +86,17 @@ export const VerseList: React.FC<VerseListProps> = ({
     () => surahDetail.ayat.filter((verse) => getMushafPage(surahDetail.nomor, verse.nomorAyat) === currentMushafPage),
     [currentMushafPage, surahDetail]
   );
+  const verseOptions = useMemo(
+    () => surahDetail.ayat.map((verse) => ({ value: verse.nomorAyat, label: `Ayat ${verse.nomorAyat}` })),
+    [surahDetail.ayat]
+  );
   const currentPageIndex = Math.max(0, mushafPages.indexOf(currentMushafPage));
 
   useEffect(() => {
     const firstPage = getMushafPage(surahDetail.nomor, surahDetail.ayat[0]?.nomorAyat ?? 1);
     setCurrentMushafPage(firstPage);
     setSelectedMushafVerseNumber(null);
+    setGotoVerseNumber(1);
   }, [surahDetail.nomor]);
 
   useEffect(() => {
@@ -105,6 +112,20 @@ export const VerseList: React.FC<VerseListProps> = ({
       document.getElementById(`verse-${surahDetail.nomor}-${targetVerse}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
     });
   }, [activePlayingVerse, currentMushafPage, surahDetail.nomor, targetVerseNumber]);
+
+  const handleGotoVerse = (verseNumber: number) => {
+    setGotoVerseNumber(verseNumber);
+    setCurrentMushafPage(getMushafPage(surahDetail.nomor, verseNumber));
+    if (settings.readDisplayMode === 'mushaf') setSelectedMushafVerseNumber(verseNumber);
+
+    window.requestAnimationFrame(() => {
+      window.requestAnimationFrame(() => {
+        const target = document.getElementById(`verse-${surahDetail.nomor}-${verseNumber}`);
+        target?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        target?.focus({ preventScroll: true });
+      });
+    });
+  };
 
   const handleBookmarkClick = (verse: Verse) => {
     if (isBookmarked(verse.nomorAyat)) {
@@ -200,7 +221,7 @@ export const VerseList: React.FC<VerseListProps> = ({
   return (
     <div className="max-w-4xl mx-auto space-y-6 pb-28">
       {/* Top Surah Banner */}
-      <div className="bg-[#0F1115] text-[#E2E2E2] rounded-3xl p-6 sm:p-8 shadow-2xl border border-[#1F2128] relative overflow-hidden">
+      <div className="bg-[#0F1115] text-[#E2E2E2] rounded-3xl p-6 sm:p-8 shadow-2xl border border-[#1F2128] relative overflow-visible">
         {/* Decorative Gold Glow Background Pattern */}
         <div className="absolute -right-10 -bottom-10 w-48 h-48 bg-[#D4AF37]/10 rounded-full blur-3xl pointer-events-none" />
         <div className="absolute -left-10 -top-10 w-48 h-48 bg-[#D4AF37]/5 rounded-full blur-3xl pointer-events-none" />
@@ -242,6 +263,15 @@ export const VerseList: React.FC<VerseListProps> = ({
               <Volume2 className="w-4 h-4" />
               <span>Putar Surah Dari Ayat 1</span>
             </button>
+            <VerseCombobox
+              label="Ke Ayat"
+              value={gotoVerseNumber}
+              options={verseOptions}
+              onChange={handleGotoVerse}
+              placeholder="Cari nomor ayat..."
+              ariaLabel={`Pilih ayat tujuan di Surah ${surahDetail.namaLatin}`}
+              variant="inline"
+            />
 
             <button
               onClick={() => onOpenHafalanModeForVerse(1)}
@@ -296,7 +326,8 @@ export const VerseList: React.FC<VerseListProps> = ({
             <div
               key={verse.nomorAyat}
               id={`verse-${surahDetail.nomor}-${verse.nomorAyat}`}
-              className={`group bg-[#15171E] rounded-3xl p-5 sm:p-7 border transition-all duration-300 ${
+              tabIndex={-1}
+              className={`group bg-[#15171E] rounded-3xl p-5 sm:p-7 border outline-none focus-visible:ring-2 focus-visible:ring-[#D4AF37] transition-all duration-300 ${
                 isCurrentPlaying
                   ? 'border-[#D4AF37] ring-1 ring-[#D4AF37]/40 bg-[#1A1C23] shadow-2xl shadow-[#D4AF37]/10'
                   : 'border-[#1F2128] hover:border-[#2A2D35]'

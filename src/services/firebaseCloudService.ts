@@ -237,6 +237,66 @@ export async function deleteCloudBackup(uid: string): Promise<void> {
   await deleteAllUserCloudData(uid);
 }
 
+export async function clearUserCloudHafalan(uid: string): Promise<void> {
+  const { auth, db } = services();
+  if (!uid || auth.currentUser?.uid !== uid) throw new Error('Sesi Firebase berubah. Silakan login kembali.');
+
+  const refsToDelete: DocumentReference[] = [];
+
+  // 1. learner_records/{uid}/verses/*
+  try {
+    const learnerVersesSnap = await getDocs(collection(db, 'learner_records', uid, 'verses'));
+    learnerVersesSnap.forEach((d) => refsToDelete.push(d.ref));
+  } catch (err) {
+    console.warn('Gagal membaca learner_records untuk dihapus:', err);
+  }
+
+  // Delete in batches
+  const BATCH_SIZE = 400;
+  for (let i = 0; i < refsToDelete.length; i += BATCH_SIZE) {
+    const batch = writeBatch(db);
+    const chunk = refsToDelete.slice(i, i + BATCH_SIZE);
+    chunk.forEach((ref) => batch.delete(ref));
+    await batch.commit();
+  }
+
+  // 2. Also update backup file if current backup exists, removing hafalanRecords
+  try {
+    const ref = backupRef(uid);
+    const snap = await getDocFromServer(ref);
+    if (snap.exists()) {
+      const data = snap.data();
+      if (typeof data?.content === 'string') {
+        const payload = JSON.parse(data.content);
+        if (payload?.data) {
+          payload.data.hafalanRecords = {};
+          const newContent = JSON.stringify(payload);
+          const newSize = new Blob([newContent]).size;
+          await runTransaction(db, async (tx) => {
+            const current = await tx.get(ref);
+            if (current.exists()) {
+              const updatedAt = Timestamp.fromMillis(Date.now());
+              tx.set(ref, { content: newContent, size: newSize, updatedAt });
+            }
+          });
+        }
+      }
+    }
+  } catch (err) {
+    console.warn('Gagal memperbarui backup saat clearUserCloudHafalan:', err);
+  }
+
+  // 3. Clear offline pending queue for this user
+  try {
+    localStorage.removeItem('halaqah_pending_' + uid);
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new Event('halaqah-pending'));
+    }
+  } catch {
+    /* Safe ignore */
+  }
+}
+
 export function isValidBackupPayload(value: unknown): value is CloudBackupPayload {
   if (!value || typeof value !== 'object') return false;
   const backup = value as Partial<CloudBackupPayload>;

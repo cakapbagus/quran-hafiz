@@ -7,6 +7,12 @@ if (typeof document !== 'undefined') {
 
 export function useDialogAccessibility(onClose: () => void, enabled = true) {
   const dialogRef = useRef<HTMLDivElement>(null);
+  const onCloseRef = useRef(onClose);
+
+  useEffect(() => {
+    onCloseRef.current = onClose;
+  }, [onClose]);
+
   useEffect(() => {
     if (!enabled) return;
     const active = document.activeElement as HTMLElement | null;
@@ -16,7 +22,7 @@ export function useDialogAccessibility(onClose: () => void, enabled = true) {
     firstFocusable?.focus();
     queueMicrotask(() => { if (dialog?.isConnected && !dialog.contains(document.activeElement)) firstFocusable?.focus(); });
     const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') return onClose();
+      if (event.key === 'Escape') return onCloseRef.current();
       if (event.key !== 'Tab' || !dialog) return;
       const focusable = [...dialog.querySelectorAll<HTMLElement>('button:not(:disabled), input:not(:disabled), select:not(:disabled), textarea:not(:disabled), [tabindex]:not([tabindex="-1"])')];
       if (!focusable.length) return;
@@ -30,6 +36,6 @@ export function useDialogAccessibility(onClose: () => void, enabled = true) {
       document.removeEventListener('keydown', onKeyDown);
       queueMicrotask(() => { if (previous?.isConnected) previous.focus(); });
     };
-  }, [enabled, onClose]);
+  }, [enabled]);
   return dialogRef;
 }

@@ -3,6 +3,7 @@ import { SurahDetail, Verse, HafalanVerseRecord, HafalanStatusType, UserSettings
 
 import { ALL_SURAHS } from '../data/surahList';
 import { MushafArabicText, toArabicNumerals } from './MushafArabicText';
+import { VerseCombobox } from './VerseCombobox';
 import {
   Brain,
   Play,
@@ -63,8 +64,6 @@ export const HafalanModeView: React.FC<HafalanModeViewProps> = ({
   const [selectedSurahNumber, setSelectedSurahNumber] = useState<number>(currentSurah?.nomor || 1); // Default Al-Fatihah
   const [startVerse, setStartVerse] = useState<number>(1);
   const [endVerse, setEndVerse] = useState<number>(5);
-  const [startVerseInput, setStartVerseInput] = useState('1');
-  const [endVerseInput, setEndVerseInput] = useState('5');
   const [repeatPerVerse, setRepeatPerVerse] = useState<number>(3);
   const [maskType, setMaskType] = useState<'none' | 'blur_all' | 'first_letters'>('none');
   const [revealedVerses, setRevealedVerses] = useState<Record<number, boolean>>({});
@@ -76,8 +75,6 @@ export const HafalanModeView: React.FC<HafalanModeViewProps> = ({
       const initialEnd = Math.min(5, currentSurah.jumlahAyat);
       setStartVerse(1);
       setEndVerse(initialEnd);
-      setStartVerseInput('1');
-      setEndVerseInput(String(initialEnd));
       setSelectedVerseNumber(null);
       setRevealedVerses({});
     }
@@ -88,20 +85,15 @@ export const HafalanModeView: React.FC<HafalanModeViewProps> = ({
     onSelectSurah(num);
   };
 
-  const commitStartVerse = () => {
-    const val = Math.max(1, Math.min(Number(startVerseInput) || 1, currentSurah?.jumlahAyat || 286));
-    setStartVerse(val);
-    setStartVerseInput(String(val));
-    if (val > endVerse) {
-      setEndVerse(val);
-      setEndVerseInput(String(val));
+  const handleStartVerseChange = (newStart: number) => {
+    setStartVerse(newStart);
+    if (newStart > endVerse) {
+      setEndVerse(newStart);
     }
   };
 
-  const commitEndVerse = () => {
-    const val = Math.max(startVerse, Math.min(Number(endVerseInput) || startVerse, currentSurah?.jumlahAyat || 286));
-    setEndVerse(val);
-    setEndVerseInput(String(val));
+  const handleEndVerseChange = (newEnd: number) => {
+    setEndVerse(newEnd);
   };
 
   const toggleVerseReveal = (verseNum: number) => {
@@ -218,60 +210,33 @@ export const HafalanModeView: React.FC<HafalanModeViewProps> = ({
           </div>
 
           {/* Start Verse */}
-          <div>
-            <label className="block text-xs font-semibold text-[#8A8D9A] mb-1">
-              Dari Ayat:
-            </label>
-            <input
-              type="number"
-              min={1}
-              max={currentSurah?.jumlahAyat || 286}
-              value={startVerseInput}
-              inputMode="numeric"
-              onFocus={(e) => e.currentTarget.select()}
-              onChange={(e) => {
-                const input = e.target.value;
-                setStartVerseInput(input);
-                const value = Number(input);
-                if (input !== '' && Number.isInteger(value) && value >= 1 && value <= (currentSurah?.jumlahAyat || 286)) {
-                  setStartVerse(value);
-                  if (value > endVerse) {
-                    setEndVerse(value);
-                    setEndVerseInput(String(value));
-                  }
-                }
-              }}
-              onBlur={commitStartVerse}
-              onKeyDown={(e) => { if (e.key === 'Enter') e.currentTarget.blur(); }}
-              className="w-full px-3 py-2 text-xs rounded-xl bg-[#0F1115] border border-[#2A2D35] font-medium text-[#E2E2E2] focus:outline-none focus:border-[#D4AF37]"
-            />
-          </div>
+          <VerseCombobox
+            label="Dari Ayat:"
+            value={startVerse}
+            onChange={handleStartVerseChange}
+            placeholder="Cari no ayat..."
+            ariaLabel="Pilih awal rentang ayat"
+            options={Array.from({ length: currentSurah?.jumlahAyat || 1 }, (_, i) => ({
+              value: i + 1,
+              label: `Ayat ${i + 1}`,
+            }))}
+          />
 
           {/* End Verse */}
-          <div>
-            <label className="block text-xs font-semibold text-[#8A8D9A] mb-1">
-              Sampai Ayat:
-            </label>
-            <input
-              type="number"
-              min={startVerse}
-              max={currentSurah?.jumlahAyat || 286}
-              value={endVerseInput}
-              inputMode="numeric"
-              onFocus={(e) => e.currentTarget.select()}
-              onChange={(e) => {
-                const input = e.target.value;
-                setEndVerseInput(input);
-                const value = Number(input);
-                if (input !== '' && Number.isInteger(value) && value >= startVerse && value <= (currentSurah?.jumlahAyat || 286)) {
-                  setEndVerse(value);
-                }
-              }}
-              onBlur={commitEndVerse}
-              onKeyDown={(e) => { if (e.key === 'Enter') e.currentTarget.blur(); }}
-              className="w-full px-3 py-2 text-xs rounded-xl bg-[#0F1115] border border-[#2A2D35] font-medium text-[#E2E2E2] focus:outline-none focus:border-[#D4AF37]"
-            />
-          </div>
+          <VerseCombobox
+            label="Sampai Ayat:"
+            value={endVerse}
+            onChange={handleEndVerseChange}
+            placeholder="Cari no ayat..."
+            ariaLabel="Pilih akhir rentang ayat"
+            options={Array.from(
+              { length: (currentSurah?.jumlahAyat || 1) - startVerse + 1 },
+              (_, i) => ({
+                value: startVerse + i,
+                label: `Ayat ${startVerse + i}`,
+              })
+            )}
+          />
 
           {/* Repeat Loop Count */}
           <div>

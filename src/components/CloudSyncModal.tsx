@@ -90,7 +90,7 @@ export const CloudSyncModal: React.FC<CloudSyncModalProps> = ({
   onImportLegacyHafalan,
   hasLegacyHafalan = false
 }) => {
-  const dialogRef = useDialogAccessibility(onClose);
+  const dialogRef = useDialogAccessibility(onClose, isOpen);
   const [isImportingLegacy, setIsImportingLegacy] = useState(false);
   const [token, setToken] = useState<string | null>(getCurrentUserId());
   const [userProfile, setUserProfile] = useState<GoogleUserProfile | null>(getCurrentGoogleUser());
