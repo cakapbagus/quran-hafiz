@@ -1,8 +1,10 @@
 import React, { useMemo } from 'react';
-import { parseArabicTajwid, TAJWID_COLOR_MAP } from '../data/tajwidRules';
+import { isWaqafRule, TAJWID_COLOR_MAP } from '../data/tajwidRules';
+import { parseAlQuranCloudTajwid } from '../data/alQuranCloudTajwid';
 
 interface ColoredArabicVerseProps {
   arabicText: string;
+  tajwidText?: string;
   fontSize: number;
   enableTajwid: boolean;
   className?: string;
@@ -10,14 +12,15 @@ interface ColoredArabicVerseProps {
 
 export const ColoredArabicVerse: React.FC<ColoredArabicVerseProps> = ({
   arabicText,
+  tajwidText,
   fontSize,
   enableTajwid,
   className = ''
 }) => {
   const tokens = useMemo(() => {
-    if (!enableTajwid) return null;
-    return parseArabicTajwid(arabicText);
-  }, [arabicText, enableTajwid]);
+    if (!enableTajwid || !tajwidText) return null;
+    return parseAlQuranCloudTajwid(tajwidText);
+  }, [tajwidText, enableTajwid]);
 
   if (!enableTajwid || !tokens) {
     return (
@@ -52,7 +55,7 @@ export const ColoredArabicVerse: React.FC<ColoredArabicVerseProps> = ({
         return (
           <span
             key={index}
-            className="transition-colors duration-150"
+            className={`transition-colors duration-150 ${isWaqafRule(token.rule) ? 'inline-block px-[0.12em]' : ''}`}
             style={{ color: textColor }}
             title={token.label}
           >

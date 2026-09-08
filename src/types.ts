@@ -22,6 +22,7 @@ export interface VerseAudio {
 export interface Verse {
   nomorAyat: number;
   teksArab: string;
+  teksArabTajwid?: string;
   teksLatin: string;
   teksIndonesia: string;
   audio: VerseAudio;
@@ -88,8 +89,15 @@ export interface AudioPlaybackState {
 
 export type QuranDisplayMode = 'verse' | 'mushaf';
 
+export type ArabicFont =
+  | 'scheherazade_new'
+  | 'lpmq_isep_misbah'
+  | 'amiri'
+  | 'noto_naskh_arabic';
+
 export interface UserSettings {
   arabicFontSize: number; // in px e.g. 28
+  arabicFont: ArabicFont;
   latinFontSize: number;
   showTranslation: boolean;
   showLatin: boolean;

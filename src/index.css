@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Scheherazade+New:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Cinzel:wght@500;600;700&family=JetBrains+Mono:wght@500;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=Noto+Naskh+Arabic:wght@400;500;600;700&family=Scheherazade+New:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Cinzel:wght@500;600;700&family=JetBrains+Mono:wght@500;700;800&display=swap');
 @import "tailwindcss";
 
 :root {
@@ -23,6 +23,7 @@
   --gold-hover: #7E5900;
   --scrollbar-track: #EEE9DF;
   --scrollbar-thumb: #C9C1B2;
+  --font-arabic: 'Scheherazade New';
 }
 
 html.dark, :root.dark {
@@ -63,16 +64,27 @@ html.dark, :root.dark {
 }
 
 .font-arabic {
-  font-family: 'Scheherazade New', 'Traditional Arabic', serif;
+  font-family: var(--font-arabic);
   font-kerning: normal;
   font-variant-ligatures: common-ligatures contextual;
   letter-spacing: normal;
+}
+
+@font-face {
+  font-family: 'LPMQ Isep Misbah';
+  src: url('/fonts/LPMQ%20IsepMisbah.ttf') format('truetype');
+  font-display: swap;
 }
 
 .font-code {
   font-family: 'JetBrains Mono', 'Consolas', 'Monaco', 'Courier New', monospace;
   font-feature-settings: 'zero' 1;
 }
+
+:root[data-arabic-font='scheherazade_new'] { --font-arabic: 'Scheherazade New'; }
+:root[data-arabic-font='lpmq_isep_misbah'] { --font-arabic: 'LPMQ Isep Misbah'; }
+:root[data-arabic-font='amiri'] { --font-arabic: 'Amiri'; }
+:root[data-arabic-font='noto_naskh_arabic'] { --font-arabic: 'Noto Naskh Arabic'; }
 
 /* Custom Scrollbar */
 ::-webkit-scrollbar {

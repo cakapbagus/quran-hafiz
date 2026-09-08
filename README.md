@@ -8,8 +8,10 @@ dan cloud save Google Drive.
 ## Stack
 
 - React 19 + Vite 6 + Tailwind CSS 4
-- Data ayat & audio dari [equran.id](https://equran.id) (dengan fallback ke
-  [api.quran.com](https://api.quran.com) dan [everyayah.com](https://everyayah.com))
+- Teks Arab Uthmani, anotasi tajwid, dan terjemahan Indonesia dari
+  [AlQuran Cloud](https://alquran.cloud); transliterasi/audio diperkaya dari
+  [equran.id](https://equran.id), dengan fallback ke
+  [api.quran.com](https://api.quran.com) dan [everyayah.com](https://everyayah.com)
 - Semua state pengguna (settings, bookmark, progres hafalan) disimpan di
   `localStorage` browser
 

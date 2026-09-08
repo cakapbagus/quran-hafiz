@@ -7,6 +7,7 @@ const SETTINGS_KEY = 'murottal_quran_settings_v1';
 
 export const DEFAULT_SETTINGS: UserSettings = {
   arabicFontSize: 28,
+  arabicFont: 'scheherazade_new',
   latinFontSize: 15,
   showTranslation: true,
   showLatin: true,
@@ -27,6 +28,7 @@ export function getStoredSettings(): UserSettings {
     const settings = data ? { ...DEFAULT_SETTINGS, ...JSON.parse(data) } : { ...DEFAULT_SETTINGS };
         if (settings.theme === 'emerald_dark') settings.theme = 'dark';
         if (!['system', 'dark', 'light'].includes(settings.theme)) settings.theme = 'system';
+        if (!['scheherazade_new', 'lpmq_isep_misbah', 'amiri', 'noto_naskh_arabic'].includes(settings.arabicFont)) settings.arabicFont = 'scheherazade_new';
         return settings;
   } catch (e) {
     return DEFAULT_SETTINGS;

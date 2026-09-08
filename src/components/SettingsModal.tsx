@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useDialogAccessibility } from '../hooks/useDialogAccessibility';
-import { UserSettings } from '../types';
+import { ArabicFont, UserSettings } from '../types';
 import { QARIS } from '../data/qaris';
 import { X, Sliders, Type, Volume2, Monitor, Moon, Sun, Trash2, Cloud, Sparkles, BookOpen, Rows3, RotateCcw, Download } from 'lucide-react';
 
@@ -14,6 +14,13 @@ interface SettingsModalProps {
   onResetProgress?: () => void;
   onOpenCloudSync?: () => void;
 }
+
+const ARABIC_FONT_OPTIONS: Array<{ value: ArabicFont; label: string }> = [
+  { value: 'scheherazade_new', label: 'Scheherazade New' },
+  { value: 'lpmq_isep_misbah', label: 'LPMQ Isep Misbah' },
+  { value: 'amiri', label: 'Amiri' },
+  { value: 'noto_naskh_arabic', label: 'Noto Naskh Arabic' }
+];
 
 export const SettingsModal: React.FC<SettingsModalProps> = ({
   settings,
@@ -185,22 +192,46 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
           ))}
         </div>
 
-        {/* Font Size Settings */}
+        {/* Arabic Typography Settings */}
         <div className="space-y-3">
-          <h3 className="text-xs font-bold text-[#8A8D9A] uppercase tracking-wide flex items-center gap-2">
-            <Type className="w-4 h-4 text-[#D4AF37]" />
-            <span>Ukuran Tulisan Arab ({settings.arabicFontSize}px)</span>
+          <h3 className="flex items-center gap-2 text-xs font-bold uppercase tracking-wide text-[#8A8D9A]">
+            <Type className="h-4 w-4 text-[#D4AF37]" />
+            <span>Tulisan Arab</span>
           </h3>
-          <input
-            type="range"
-            min={20}
-            max={48}
-            value={settings.arabicFontSize}
-            onChange={(e) => onUpdateSettings({ arabicFontSize: Number(e.target.value) })}
-            className="w-full accent-[#D4AF37] cursor-pointer"
-          />
-          <div className="p-3 bg-[#0F1115] border border-[#2A2D35] rounded-xl text-right font-arabic font-bold text-[#E2E2E2]" style={{ fontSize: `${settings.arabicFontSize}px` }}>
-            بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ
+
+          <div className="space-y-4 rounded-2xl border border-[#2A2D35] bg-[#0F1115] p-3">
+            <label className="block space-y-2">
+              <span className="text-xs font-semibold text-[#E2E2E2]">Font</span>
+              <select
+                value={settings.arabicFont}
+                onChange={(event) => onUpdateSettings({ arabicFont: event.target.value as ArabicFont })}
+                className="w-full rounded-xl border border-[#2A2D35] bg-[#15171E] px-3 py-2.5 text-sm font-semibold text-[#E2E2E2] outline-none transition focus:border-[#D4AF37]"
+                aria-label="Pilih font tulisan Arab"
+              >
+                {ARABIC_FONT_OPTIONS.map((font) => (
+                  <option key={font.value} value={font.value}>{font.label}</option>
+                ))}
+              </select>
+            </label>
+
+            <div className="space-y-2 border-t border-[#2A2D35] pt-4">
+              <div className="flex items-center justify-between text-xs font-semibold text-[#E2E2E2]">
+                <label htmlFor="arabic-font-size">Ukuran</label>
+                <span className="text-[#D4AF37]">{settings.arabicFontSize}px</span>
+              </div>
+              <input
+                id="arabic-font-size"
+                type="range"
+                min={20}
+                max={48}
+                value={settings.arabicFontSize}
+                onChange={(e) => onUpdateSettings({ arabicFontSize: Number(e.target.value) })}
+                className="w-full cursor-pointer accent-[#D4AF37]"
+              />
+              <div className="rounded-xl border border-[#2A2D35] bg-[#15171E] p-3 text-right font-arabic font-bold text-[#E2E2E2]" style={{ fontSize: `${settings.arabicFontSize}px` }}>
+                بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ
+              </div>
+            </div>
           </div>
         </div>
 

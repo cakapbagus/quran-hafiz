@@ -16,13 +16,47 @@ interface TajwidGuideViewProps {
   onOpenQuranForExample?: (surahNumber: number, verseNumber: number) => void;
 }
 
-interface ExampleSegment {
+export interface ExampleSegment {
   text: string;
   highlighted: boolean;
 }
 
-const splitExampleByHighlights = (text: string, highlights: string[]): ExampleSegment[] => {
-  const patterns = [...highlights].filter(Boolean).sort((a, b) => b.length - a.length);
+const COMBINING_MARK_REGEX = /[\u064B-\u065F\u0670\u06D6-\u06ED]/u;
+
+const normalizeHighlight = (text: string, pattern: string): string => {
+  if (!pattern || !COMBINING_MARK_REGEX.test(pattern[0])) return pattern;
+  const idx = text.indexOf(pattern);
+  if (idx <= 0) return pattern;
+  let start = idx - 1;
+  while (start > 0 && COMBINING_MARK_REGEX.test(text[start])) {
+    start--;
+  }
+  return text.slice(start, idx) + pattern;
+};
+
+const UNCOLORED_IZHAR_RULES: TajwidRuleKey[] = ['izhar_halqi', 'izhar_syafawi'];
+
+const isUncoloredIzhar = (ruleKey: TajwidRuleKey): boolean =>
+  UNCOLORED_IZHAR_RULES.includes(ruleKey);
+
+export const getRuleDisplayColor = (rule: TajwidRuleInfo): string =>
+  isUncoloredIzhar(rule.key) ? '#8A8D9A' : rule.color;
+
+export const getExampleHighlightStyle = (
+  ruleKey: TajwidRuleKey,
+  color: string
+): React.CSSProperties =>
+  isUncoloredIzhar(ruleKey)
+    ? {
+        textDecorationLine: 'underline',
+        textUnderlineOffset: '0.2em',
+        textDecorationThickness: '0.08em'
+      }
+    : { color };
+
+export const splitExampleByHighlights = (text: string, highlights: string[]): ExampleSegment[] => {
+  const normalizedHighlights = highlights.map((pattern) => normalizeHighlight(text, pattern));
+  const patterns = [...normalizedHighlights].filter(Boolean).sort((a, b) => b.length - a.length);
   const segments: ExampleSegment[] = [];
   let cursor = 0;
 
@@ -56,7 +90,6 @@ export const TajwidGuideView: React.FC<TajwidGuideViewProps> = () => {
   const categories = [
     'Semua',
     'Tanda Waqaf',
-    'Kaidah Ibtida\'',
     'Nun Sukun & Tanwin',
     'Mim Sukun',
     'Qalqalah',
@@ -75,6 +108,7 @@ export const TajwidGuideView: React.FC<TajwidGuideViewProps> = () => {
   });
 
   const activeRule = TAJWID_RULES.find((r) => r.key === selectedRuleKey) || TAJWID_RULES[0];
+  const activeRuleDisplayColor = getRuleDisplayColor(activeRule);
 
   return (
     <div className="space-y-6 pb-28">
@@ -165,6 +199,7 @@ export const TajwidGuideView: React.FC<TajwidGuideViewProps> = () => {
           <div className="space-y-2.5 max-h-[600px] overflow-y-auto pr-1">
             {filteredRules.map((rule) => {
               const isSelected = rule.key === selectedRuleKey;
+              const displayColor = getRuleDisplayColor(rule);
               return (
                 <div
                   key={rule.key}
@@ -185,9 +220,9 @@ export const TajwidGuideView: React.FC<TajwidGuideViewProps> = () => {
                     <div
                       className="w-8 h-8 rounded-xl flex items-center justify-center font-bold text-xs shrink-0 border"
                       style={{
-                        backgroundColor: `${rule.color}20`,
-                        borderColor: `${rule.color}50`,
-                        color: rule.color
+                        backgroundColor: `${displayColor}20`,
+                        borderColor: `${displayColor}50`,
+                        color: displayColor
                       }}
                     >
                       ●
@@ -227,9 +262,9 @@ export const TajwidGuideView: React.FC<TajwidGuideViewProps> = () => {
                 <div
                   className="w-10 h-10 rounded-2xl flex items-center justify-center font-bold text-sm border"
                   style={{
-                    backgroundColor: `${activeRule.color}25`,
-                    borderColor: `${activeRule.color}60`,
-                    color: activeRule.color
+                    backgroundColor: `${activeRuleDisplayColor}25`,
+                    borderColor: `${activeRuleDisplayColor}60`,
+                    color: activeRuleDisplayColor
                   }}
                 >
                   ●
@@ -247,9 +282,9 @@ export const TajwidGuideView: React.FC<TajwidGuideViewProps> = () => {
               <span
                 className="text-xs font-bold px-3 py-1 rounded-full border"
                 style={{
-                  backgroundColor: `${activeRule.color}15`,
-                  color: activeRule.color,
-                  borderColor: `${activeRule.color}40`
+                  backgroundColor: `${activeRuleDisplayColor}15`,
+                  color: activeRuleDisplayColor,
+                  borderColor: `${activeRuleDisplayColor}40`
                 }}
               >
                 Kaidah Tajwid
@@ -308,7 +343,9 @@ export const TajwidGuideView: React.FC<TajwidGuideViewProps> = () => {
                   {splitExampleByHighlights(activeRule.contohLafaz, activeRule.contohSorotan).map((segment, index) => (
                     <span
                       key={`${index}-${segment.text}`}
-                      style={segment.highlighted ? { color: activeRule.color } : undefined}
+                      style={segment.highlighted
+                        ? getExampleHighlightStyle(activeRule.key, activeRule.color)
+                        : undefined}
                     >
                       {segment.text}
                     </span>

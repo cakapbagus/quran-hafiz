@@ -384,6 +384,7 @@ export const HafalanModeView: React.FC<HafalanModeViewProps> = ({
                 >
                   <MushafArabicText
                     text={displayedText}
+                    tajwidText={displayedText === verse.teksArab ? verse.teksArabTajwid : undefined}
                     enableTajwid={isRevealed && (settings.enableColoredTajwid ?? true)}
                   />{' '}
                   <span className="mushaf-verse-number whitespace-nowrap font-arabic font-bold" aria-hidden="true">
@@ -465,7 +466,11 @@ export const HafalanModeView: React.FC<HafalanModeViewProps> = ({
                   style={{ fontSize: `${settings.arabicFontSize}px` }}
                   dir="rtl"
                 >
-                  <MushafArabicText text={displayedText} enableTajwid={isRevealed && (settings.enableColoredTajwid ?? true)} />
+                  <MushafArabicText
+                    text={displayedText}
+                    tajwidText={displayedText === verse.teksArab ? verse.teksArabTajwid : undefined}
+                    enableTajwid={isRevealed && (settings.enableColoredTajwid ?? true)}
+                  />
                 </div>
                 {settings.showLatin && verse.teksLatin && (
                   <p className="mt-4 italic leading-relaxed text-[#D4AF37]" style={{ fontSize: `${settings.latinFontSize}px` }}>

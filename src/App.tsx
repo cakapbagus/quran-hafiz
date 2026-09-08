@@ -59,6 +59,12 @@ import { HalaqahPanel } from './components/HalaqahPanel';
 import { WelcomeLoginModal } from './components/GoogleLogin';
 import { saveVerse, watchRecords, type Records } from './services/halaqahService';
 
+export interface QuranHistoryState {
+  quranMainTab: MainTabType;
+  surahNumber?: number | null;
+  fromSurahList?: boolean;
+}
+
 export default function App() {
   const [learningRoomOpen, setLearningRoomOpen] = useState(false);
   const [teacherMode, updateTeacherMode] = useState(() => window.location.hash === '#/guru');
@@ -68,7 +74,16 @@ export default function App() {
   };
   useEffect(() => {
     const navigate = () => updateTeacherMode(window.location.hash === '#/guru');
-    if (!window.location.hash) window.history.replaceState(null, '', '#/murid');
+    const existingState = (typeof window !== 'undefined' ? window.history.state : null) as QuranHistoryState | null;
+    const initialState: QuranHistoryState = existingState?.quranMainTab
+      ? existingState
+      : { quranMainTab: 'read', surahNumber: null, fromSurahList: false };
+
+    if (!window.location.hash) {
+      window.history.replaceState(initialState, '', '#/murid');
+    } else if (!existingState || !existingState.quranMainTab) {
+      window.history.replaceState(initialState, '', window.location.href);
+    }
     window.addEventListener('hashchange', navigate);
     return () => window.removeEventListener('hashchange', navigate);
   }, []);
@@ -76,42 +91,164 @@ export default function App() {
   const [sharedRecords, setSharedRecords] = useState<Records>({});
   const [sharedError, setSharedError] = useState('');
   const [sharedReady, setSharedReady] = useState(false);
-  const [activeTab, setActiveTab] = useState<MainTabType>('read');
-  const [selectedSurahNumber, setSelectedSurahNumber] = useState<number | null>(null);
 
-  useEffect(() => {
-    const historyState = window.history.state as Record<string, unknown> | null;
-    const currentHistoryTab = historyState?.quranMainTab;
-
-    if (activeTab === 'read') {
-      if (currentHistoryTab && currentHistoryTab !== 'read') {
-        window.history.back();
-      } else if (currentHistoryTab !== 'read') {
-        window.history.replaceState({ ...historyState, quranMainTab: 'read' }, '', window.location.href);
-      }
-    } else if (currentHistoryTab === 'read') {
-      window.history.pushState({ ...historyState, quranMainTab: activeTab }, '', window.location.href);
-    } else if (currentHistoryTab !== activeTab) {
-      window.history.replaceState({ ...historyState, quranMainTab: activeTab }, '', window.location.href);
-    }
-  }, [activeTab]);
-
-  useEffect(() => {
-    const handleBackNavigation = (event: PopStateEvent) => {
-      const historyTab = (event.state as Record<string, unknown> | null)?.quranMainTab;
-      const validTabs: MainTabType[] = ['read', 'hafalan', 'ujian', 'tajwid', 'bookmark', 'progress'];
-      setLearningRoomOpen(false);
-      setActiveTab(validTabs.includes(historyTab as MainTabType) ? historyTab as MainTabType : 'read');
-    };
-
-    window.addEventListener('popstate', handleBackNavigation);
-    return () => window.removeEventListener('popstate', handleBackNavigation);
-  }, []);
+  const pendingReadActionRef = useRef<{ verseNumber: number; play: boolean } | null>(null);
+  const [activeTab, setActiveTab] = useState<MainTabType>(() => {
+    const historyState = (typeof window !== 'undefined' ? window.history.state : null) as QuranHistoryState | null;
+    const validTabs: MainTabType[] = ['read', 'hafalan', 'ujian', 'tajwid', 'bookmark', 'progress'];
+    return validTabs.includes(historyState?.quranMainTab as MainTabType)
+      ? (historyState!.quranMainTab as MainTabType)
+      : 'read';
+  });
+  const [selectedSurahNumber, setSelectedSurahNumber] = useState<number | null>(() => {
+    const historyState = (typeof window !== 'undefined' ? window.history.state : null) as QuranHistoryState | null;
+    return typeof historyState?.surahNumber === 'number' ? historyState.surahNumber : null;
+  });
   const [currentSurahDetail, setCurrentSurahDetail] = useState<SurahDetail | null>(null);
   const [isLoadingSurah, setIsLoadingSurah] = useState<boolean>(false);
   const [surahLoadError, setSurahLoadError] = useState<string | null>(null);
   const [surahLoadAttempt, setSurahLoadAttempt] = useState(0);
   const [searchQuery, setSearchQuery] = useState<string>('');
+
+  const openSurahInReadTab = useCallback(
+    (
+      surahNum: number,
+      options?: {
+        replace?: boolean;
+        verseNumber?: number;
+        play?: boolean;
+        fromSurahList?: boolean;
+      }
+    ) => {
+      setLearningRoomOpen(false);
+      if (options?.verseNumber !== undefined) {
+        pendingReadActionRef.current = {
+          verseNumber: options.verseNumber,
+          play: options.play ?? false
+        };
+      } else if (options?.play) {
+        pendingReadActionRef.current = { verseNumber: 1, play: true };
+      } else {
+        pendingReadActionRef.current = null;
+      }
+
+      const nextHistoryState: QuranHistoryState = {
+        quranMainTab: 'read',
+        surahNumber: surahNum,
+        fromSurahList: options?.fromSurahList ?? false
+      };
+
+      if (typeof window !== 'undefined') {
+        if (options?.replace) {
+          window.history.replaceState(nextHistoryState, '', window.location.href);
+        } else {
+          window.history.pushState(nextHistoryState, '', window.location.href);
+        }
+      }
+
+      setSurahLoadError(null);
+      setSelectedSurahNumber(surahNum);
+      setActiveTab('read');
+      if (typeof window !== 'undefined') {
+        window.scrollTo({ top: 0, behavior: 'instant' });
+      }
+    },
+    []
+  );
+
+  const handleBackToSurahList = useCallback(() => {
+    setLearningRoomOpen(false);
+    pendingReadActionRef.current = null;
+    setSurahLoadError(null);
+
+    const currentState = (typeof window !== 'undefined' ? window.history.state : null) as QuranHistoryState | null;
+    if (currentState?.fromSurahList && typeof window !== 'undefined' && window.history.length > 1) {
+      setSelectedSurahNumber(null);
+      setActiveTab('read');
+      window.history.back();
+    } else {
+      setSelectedSurahNumber(null);
+      setActiveTab('read');
+      if (typeof window !== 'undefined') {
+        window.history.replaceState(
+          { ...(currentState ?? {}), quranMainTab: 'read', surahNumber: null, fromSurahList: false },
+          '',
+          window.location.href
+        );
+      }
+    }
+  }, []);
+
+  const handleOpenReadTab = useCallback(() => {
+    setLearningRoomOpen(false);
+    pendingReadActionRef.current = null;
+    if (activeTab === 'read' && selectedSurahNumber !== null) {
+      handleBackToSurahList();
+      return;
+    }
+    setSelectedSurahNumber(null);
+    setActiveTab('read');
+  }, [activeTab, handleBackToSurahList, selectedSurahNumber]);
+
+  const handleSelectSurah = useCallback(
+    (surahNum: number) => {
+      openSurahInReadTab(surahNum, { fromSurahList: true });
+    },
+    [openSurahInReadTab]
+  );
+
+  useEffect(() => {
+    const historyState = (typeof window !== 'undefined' ? window.history.state : null) as QuranHistoryState | null;
+    const currentHistoryTab = historyState?.quranMainTab;
+
+    if (currentHistoryTab === activeTab) {
+      return;
+    }
+
+    if (activeTab === 'read') {
+      window.history.replaceState(
+        { ...historyState, quranMainTab: 'read', surahNumber: null, fromSurahList: false },
+        '',
+        window.location.href
+      );
+    } else if (currentHistoryTab === 'read') {
+      window.history.pushState(
+        { ...historyState, quranMainTab: activeTab, surahNumber: null, fromSurahList: false },
+        '',
+        window.location.href
+      );
+    } else {
+      window.history.replaceState(
+        { ...historyState, quranMainTab: activeTab, surahNumber: null, fromSurahList: false },
+        '',
+        window.location.href
+      );
+    }
+  }, [activeTab]);
+
+  useEffect(() => {
+    const handleBackNavigation = (event: PopStateEvent) => {
+      const state = event.state as QuranHistoryState | null;
+      const historyTab = state?.quranMainTab;
+      const validTabs: MainTabType[] = ['read', 'hafalan', 'ujian', 'tajwid', 'bookmark', 'progress'];
+      const targetTab: MainTabType = validTabs.includes(historyTab as MainTabType)
+        ? (historyTab as MainTabType)
+        : 'read';
+
+      setLearningRoomOpen(false);
+      pendingReadActionRef.current = null;
+      setSurahLoadError(null);
+      setActiveTab(targetTab);
+
+      if (targetTab === 'read') {
+        const historySurah = typeof state?.surahNumber === 'number' ? state.surahNumber : null;
+        setSelectedSurahNumber(historySurah);
+      }
+    };
+
+    window.addEventListener('popstate', handleBackNavigation);
+    return () => window.removeEventListener('popstate', handleBackNavigation);
+  }, []);
 
   // Local Storage states
   const [settings, setSettings] = useState<UserSettings>(getStoredSettings());
@@ -121,9 +258,9 @@ export default function App() {
 
   useEffect(() => {
     if (activeTab === 'hafalan') {
-      setSelectedSurahNumber(lastRead?.surahNumber ?? 1);
+      setSelectedSurahNumber((prev) => prev ?? lastRead?.surahNumber ?? 1);
     }
-  }, [activeTab]);
+  }, [activeTab, lastRead]);
 
   // Cloud Sync state
   const [isCloudSyncOpen, setIsCloudSyncOpen] = useState<boolean>(false);
@@ -217,7 +354,6 @@ export default function App() {
 
   // Audio HTML Element Ref
   const audioRef = useRef<HTMLAudioElement | null>(null);
-  const pendingReadActionRef = useRef<{ verseNumber: number; play: boolean } | null>(null);
   const playbackStateRef = useRef(playbackState);
   const settingsRef = useRef(settings);
   const surahDetailRef = useRef(currentSurahDetail);
@@ -232,11 +368,12 @@ export default function App() {
       const dark = settings.theme === 'dark' || (settings.theme === 'system' && media.matches);
       document.documentElement.classList.toggle('dark', dark);
       document.documentElement.style.colorScheme = dark ? 'dark' : 'light';
+      document.documentElement.dataset.arabicFont = settings.arabicFont;
     };
     applyTheme();
     media.addEventListener('change', applyTheme);
     return () => media.removeEventListener('change', applyTheme);
-  }, [settings.theme]);
+  }, [settings.theme, settings.arabicFont]);
   useEffect(() => { saveStoredSettings(settings); }, [settings]);
 
   // Debounced automatic sync whenever Google Drive is connected.
@@ -600,18 +737,7 @@ export default function App() {
     }
   };
 
-  const handleOpenReadTab = () => {
-    setLearningRoomOpen(false);
-    pendingReadActionRef.current = null;
-    setSelectedSurahNumber(null);
-    setActiveTab('read');
-  };
 
-  const handleSelectSurah = (surahNum: number) => {
-    setSelectedSurahNumber(surahNum);
-    setActiveTab('read');
-    window.scrollTo({ top: 0, behavior: 'instant' });
-  };
 
   const handleMarkLastRead = async (surahNumber: number, verseNumber: number, surahName: string) => {
     const isActive = lastRead?.surahNumber === surahNumber && lastRead.verseNumber === verseNumber;
@@ -635,16 +761,20 @@ export default function App() {
 
   const handleResumeLastRead = () => {
     if (lastRead) {
-      pendingReadActionRef.current = { verseNumber: lastRead.verseNumber, play: true };
-      setSelectedSurahNumber(lastRead.surahNumber);
-      setActiveTab('read');
+      openSurahInReadTab(lastRead.surahNumber, {
+        verseNumber: lastRead.verseNumber,
+        play: true,
+        fromSurahList: true
+      });
     }
   };
 
   const handleJumpToBookmark = (surahNum: number, verseNum: number) => {
-    pendingReadActionRef.current = { verseNumber: verseNum, play: false };
-    setSelectedSurahNumber(surahNum);
-    setActiveTab('read');
+    openSurahInReadTab(surahNum, {
+      verseNumber: verseNum,
+      play: false,
+      fromSurahList: false
+    });
   };
 
   const handleOpenHafalanForVerse = (surahNum: number, verseNum: number) => {
@@ -719,8 +849,7 @@ export default function App() {
               <SurahList
                 onSelectSurah={handleSelectSurah}
                 onPlaySurahAudio={(sNum) => {
-                  pendingReadActionRef.current = { verseNumber: 1, play: true };
-                  setSelectedSurahNumber(sNum);
+                  openSurahInReadTab(sNum, { verseNumber: 1, play: true, fromSurahList: true });
                 }}
                 lastRead={lastRead}
                 hafalanRecords={hafalanRecords}
@@ -739,10 +868,7 @@ export default function App() {
                 <p className="text-sm font-semibold text-red-500 max-w-md mx-auto">{surahLoadError}</p>
                 <div className="flex items-center justify-center gap-3">
                   <button
-                    onClick={() => {
-                      setSurahLoadError(null);
-                      setSelectedSurahNumber(null);
-                    }}
+                    onClick={handleBackToSurahList}
                     className="px-4 py-2 rounded-xl bg-white dark:bg-zinc-900 border border-emerald-200 dark:border-zinc-800 text-xs font-semibold text-emerald-800 dark:text-amber-300 hover:bg-emerald-50 dark:hover:bg-zinc-800 transition shadow-sm cursor-pointer"
                   >
                     ← Kembali ke Daftar Surah
@@ -758,7 +884,7 @@ export default function App() {
             ) : currentSurahDetail ? (
               <div>
                 <button
-                  onClick={() => setSelectedSurahNumber(null)}
+                  onClick={handleBackToSurahList}
                   className="mb-4 inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-white dark:bg-zinc-900 border border-emerald-200 dark:border-zinc-800 text-xs font-semibold text-emerald-800 dark:text-amber-300 hover:bg-emerald-50 dark:hover:bg-zinc-800 transition shadow-sm cursor-pointer"
                 >
                   ← Kembali ke Daftar Surah (114)
@@ -779,7 +905,9 @@ export default function App() {
                   onOpenVoiceRecorder={(vNum) =>
                     setVoiceRecorderVerse({ surahNumber: currentSurahDetail.nomor, verseNumber: vNum })
                   }
-                  onNavigateSurah={(sNum) => handleSelectSurah(sNum)}
+                  onNavigateSurah={(sNum) => {
+                    openSurahInReadTab(sNum, { replace: true, fromSurahList: true });
+                  }}
                   activePlayingVerse={
                     playbackState.surahNumber === currentSurahDetail.nomor ? playbackState.verseNumber : null
                   }
@@ -823,8 +951,7 @@ export default function App() {
               updatePersonalStatus(sNum, vNum, 'review_needed');
             }}
             onOpenVerseReader={(sNum, vNum) => {
-              setSelectedSurahNumber(sNum);
-              setActiveTab('read');
+              openSurahInReadTab(sNum, { verseNumber: vNum, play: false, fromSurahList: false });
             }}
           />
         )}
@@ -850,7 +977,9 @@ export default function App() {
         {activeTab === 'progress' && (
           <HafalanProgressView
             hafalanRecords={hafalanRecords}
-            onSelectSurah={handleSelectSurah}
+            onSelectSurah={(sNum) => {
+              openSurahInReadTab(sNum, { fromSurahList: false });
+            }}
           />
         )}
       </main>

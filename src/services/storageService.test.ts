@@ -28,9 +28,18 @@ describe('settings storage', () => {
 
   it('uses separate display defaults for reading and memorization', () => {
     expect(getStoredSettings()).toMatchObject({
+      arabicFont: 'scheherazade_new',
       readDisplayMode: 'verse',
       hafalanDisplayMode: 'mushaf'
     });
+  });
+
+  it('accepts supported Arabic fonts and resets removed font choices', () => {
+    localStorage.setItem(keys.settings, JSON.stringify({ arabicFont: 'noto_naskh_arabic' }));
+    expect(getStoredSettings().arabicFont).toBe('noto_naskh_arabic');
+
+    localStorage.setItem(keys.settings, JSON.stringify({ arabicFont: 'kitab' }));
+    expect(getStoredSettings().arabicFont).toBe('scheherazade_new');
   });
 
   it('adds display defaults to settings saved by an older version', () => {

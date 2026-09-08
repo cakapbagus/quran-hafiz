@@ -473,6 +473,7 @@ export const VerseList: React.FC<VerseListProps> = ({
                   ) : (
                     <ColoredArabicVerse
                       arabicText={verse.teksArab}
+                      tajwidText={verse.teksArabTajwid}
                       fontSize={settings.arabicFontSize}
                       enableTajwid={settings.enableColoredTajwid ?? true}
                     />
@@ -558,7 +559,7 @@ export const VerseList: React.FC<VerseListProps> = ({
                           : isSelected ? 'bg-[#D4AF37]/18' : 'hover:bg-[#D4AF37]/10'
                       }`}
                     >
-                      <MushafArabicText text={verse.teksArab} enableTajwid={settings.enableColoredTajwid ?? true} />{' '}
+                      <MushafArabicText text={verse.teksArab} tajwidText={verse.teksArabTajwid} enableTajwid={settings.enableColoredTajwid ?? true} />{' '}
                       <span className="mushaf-verse-number whitespace-nowrap font-arabic font-bold" aria-hidden="true">
                         ﴿{toArabicNumerals(verse.nomorAyat)}﴾
                       </span>{' '}
